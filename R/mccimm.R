@@ -351,10 +351,16 @@ mccimm_mplus <- function(mplus_output_file = "mplus_output.out",
 
   estcoeff <- temp[dp]
   names(estcoeff) <- non_na_list
-  stdyx.estcoeff <- stdyx.temp[dp]
-  if (is.null(stdyx.estcoeff) != TRUE) {
-    names(stdyx.estcoeff) <- non_na_list
-  } # end (if stdyx.estcoeff is NULL)
+
+#  stdyx.estcoeff <- stdyx.temp[dp]
+#  if (is.null(stdyx.estcoeff) != TRUE) {
+#    names(stdyx.estcoeff) <- non_na_list
+#  } # end (if stdyx.estcoeff is NULL)
+
+  stdyx.dp <- dp + 2*no.parameters
+  stdyx.estcoeff <- temp[stdyx.dp]
+  names(stdyx.estcoeff) <- non_na_list
+
   Tech3 <- Tech3[dp, dp]
   rownames(Tech3) <- non_na_list
   colnames(Tech3) <- non_na_list

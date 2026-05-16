@@ -1,0 +1,1108 @@
+######################################################################################
+# Author: Prof. Gordon Cheung (University of Auckland)                               #
+# email: gordon.cheung@auckland.ac.nz                                                #
+# Purpose: Monte Carlo simulation of conditional indirect effects from Mplus outputs #
+# Model: Allows 3-way interaction                                                    #
+# Version: Beta 1.0                                                                  #
+# WARNING: This is beta version. Please report all bugs to the author                #
+###################################################################################### 
+
+# ==================== Creating Function "mccimm" Monte Carlo Confidence Intervals for Moderated Mediation ==================== #
+mccimm <- function(estP="Ctemp1.txt", varcovP="Ctemp2.txt", NoSP, LstdZ="NA", LstdW="NA",
+                   La1="NA", Lz1="NA", Lw1="NA", Lzw1="NA",
+                   La2="NA", Lz2="NA", Lw2="NA", Lzw2="NA",
+                   La3="NA", Lz3="NA", Lw3="NA", Lzw3="NA",
+                   La4="NA", Lz4="NA", Lw4="NA", Lzw4="NA") {
+
+
+
+# load the boot package (only needed once per session)
+library(MASS)
+
+######## Initial Inputs ########
+
+#setwd("C:/Research/Changya/Monte Carlo Simulation Example")  ## set working directory 
+
+#NoSP = 7                                                     ## Input number of Additional Parameters NoSP as 7 
+#LstdZ = 1                                                    ## Specify location of stdZ in Additional Parameters, "NA" = Not Applicable
+#LstdW = 6                                                 ## Specify location of stdW in Additional Parameters, "NA" = Not Applicable
+
+## Specify location of direct effects a1, a2, a3, a4                              ##
+## and interaction effects z1, z2, z3, z4,                                        ##
+## and interaction effects w1, w2, w3, w4 in the additional parameters            ##
+## and 3-way interaction effects zw1, zw2, zw3, zw4                               ##
+## "NA" = Not applicable                                                          ## 
+## Example of NEW option in Mplus:   NEW(stdZ a1 z1 a2 a3a a3b a3c);              ##
+
+#La1  = 2     ## Specify location of a1 in additional parameters as 2
+#Lz1  = 3     ## Specify location of z1 in additional parameters as 3
+#Lw1  = "NA"  ## Specify location of w1 in additional parameter; "NA" = Not Applicable
+#Lzw1 = "NA"  ## Specify location of w1 in additional parameter; "NA" = Not Applicable
+#La2  = 4     ## Specify location of a2 in additional parameters as 4
+#Lz2  = "NA"  ## Specify location of z2 in additional parameter; "NA" = Not Applicable
+#Lw2  = 5  ## Specify location of w2 in additional parameter; "NA" = Not Applicable
+#Lzw2 = "NA"  ## Specify location of w1 in additional parameter; "NA" = Not Applicable
+#La3  = "NA"  ## Specify location of a3 in additional parameter; "NA" = Not Applicable
+#Lz3  = "NA"  ## Specify location of z3 in additional parameter; "NA" = Not Applicable
+#Lw3  = "NA"  ## Specify location of w3 in additional parameter; "NA" = Not Applicable
+#Lzw3 = "NA"  ## Specify location of w1 in additional parameter; "NA" = Not Applicable
+#La4  = "NA"  ## Specify location of a4 in additional parameter; "NA" = Not Applicable
+#Lz4  = "NA"  ## Specify location of z4 in additional parameter; "NA" = Not Applicable
+#Lw4  = "NA"  ## Specify location of w4 in additional parameter; "NA" = Not Applicable
+#Lzw4 = "NA"  ## Specify location of w1 in additional parameter; "NA" = Not Applicable
+################################
+
+
+## Number of Moderating Effect and Location of Moderating Effect (if only one) ##
+NoModz <- 0
+NoModw <- 0
+PoMod <- 0
+
+if (Lz1 != "NA") NoModz <- NoModz + 1 
+if (Lz2 != "NA") NoModz <- NoModz + 1 
+if (Lz3 != "NA") NoModz <- NoModz + 1 
+if (Lz4 != "NA") NoModz <- NoModz + 1 
+
+if (Lw1 != "NA") NoModw <- NoModw + 1 
+if (Lw2 != "NA") NoModw <- NoModw + 1 
+if (Lw3 != "NA") NoModw <- NoModw + 1 
+if (Lw4 != "NA") NoModw <- NoModw + 1 
+
+NoMod <- NoModz + NoModw
+
+if (NoMod == 1) {
+  if (Lz1 != "NA") PoMod <- 1
+  if (Lz2 != "NA") PoMod <- 2
+  if (Lz3 != "NA") PoMod <- 3
+  if (Lz4 != "NA") PoMod <- 4
+  if (Lw1 != "NA") PoMod <- 1
+  if (Lw2 != "NA") PoMod <- 2
+  if (Lw3 != "NA") PoMod <- 3
+  if (Lw4 != "NA") PoMod <- 4
+}
+####
+
+###### Initialize a-paths to 1 ######
+a1 <- 1
+a2 <- 1
+a3 <- 1
+a4 <- 1
+Sa1 <- matrix(1, 5000000)
+Sa2 <- matrix(1, 5000000)
+Sa3 <- matrix(1, 5000000)
+Sa4 <- matrix(1, 5000000)
+##############################
+
+###### Initialize interaction paths to 0 ######
+z1 <- 0
+z2 <- 0
+z3 <- 0
+z4 <- 0
+Sz1 <- matrix(0, 5000000)
+Sz2 <- matrix(0, 5000000)
+Sz3 <- matrix(0, 5000000)
+Sz4 <- matrix(0, 5000000)
+
+w1 <- 0
+w2 <- 0
+w3 <- 0
+w4 <- 0
+Sw1 <- matrix(0, 5000000)
+Sw2 <- matrix(0, 5000000)
+Sw3 <- matrix(0, 5000000)
+Sw4 <- matrix(0, 5000000)
+
+zw1 <- 0
+zw2 <- 0
+zw3 <- 0
+zw4 <- 0
+Szw1 <- matrix(0, 5000000)
+Szw2 <- matrix(0, 5000000)
+Szw3 <- matrix(0, 5000000)
+Szw4 <- matrix(0, 5000000)
+##############################
+
+
+# Calculate number of estimated parameters from ctemp2.txt
+#est <- scan("ctemp2.txt")
+est <- scan(varcovP)
+NoEP = ((sqrt(1+8*length(est))-1)/2) 
+
+# Calculate starting point for extraction
+SPExt <- NoEP-NoSP+1 
+
+# Read estimated parameters from ctemp1.txt
+#est <- scan("ctemp1.txt")
+est <- scan(estP)
+estcoeff <- est[SPExt:NoEP]  # Extract the additional parameters
+
+# Read variance-covariance matrix of parameters from ctemp2.txt
+Tech <- matrix(0, NoEP, NoEP)
+#Tech[outer(1:NoEP, 1:NoEP, '<=')] <- scan('ctemp2.txt')
+Tech[outer(1:NoEP, 1:NoEP, '<=')] <- scan(varcovP)
+Tech[lower.tri(Tech)] <- t(Tech)[lower.tri(Tech)]
+Tech3 <- Tech[SPExt:NoEP, SPExt:NoEP]
+
+# Monte Carlo Simulation of 5,000,000 samples
+mcmc <- mvrnorm(n=5000000, mu=estcoeff, Sigma=Tech3, tol = 1e-6)
+
+# ===== Retain simulated samples with standard deviation larger than or equal to 0
+if (NoMod == 1) {
+  mcmc <- mcmc[which(mcmc[,LstdZ] >= 0),]
+}
+if (NoMod == 2) {
+  mcmc <- mcmc[which(mcmc[,LstdZ] >= 0),]
+  mcmc <- mcmc[which(mcmc[,LstdW] >= 0),]
+}
+
+b.no <- nrow(mcmc) 
+
+# ===== Print number of bootstrap samples
+cat("\n", "   Number of requested simulated sample = 5000000")
+cat("\n", "   Number of completed simulated sample =", b.no, rep("\n",2))
+
+# ==================================================================== #
+
+
+
+
+
+##### No Moderating Effect #####
+if (NoMod == 0) {
+
+# Define estimated parameters for calculating indirect effects
+if (La1 != "NA") a1 <- estcoeff[La1]
+if (La2 != "NA") a2 <- estcoeff[La2]
+if (La3 != "NA") a3 <- estcoeff[La3]
+if (La4 != "NA") a4 <- estcoeff[La4]
+
+# Calculate Estimated Indirect Effect 
+estM  <- a1*a2*a3*a4
+
+# Capture simulated parameters for calculating indirect effects
+if (La1 != "NA") Sa1 <- mcmc[,La1]
+if (La2 != "NA") Sa2 <- mcmc[,La2]
+if (La3 != "NA") Sa3 <- mcmc[,La3]
+if (La4 != "NA") Sa4 <- mcmc[,La4]
+
+# Calculate Simulated Indirect Effect 
+abM <- Sa1*Sa2*Sa3*Sa4
+##################################
+
+
+#### Confidence Intervals and p-value ####
+
+# Calculate Percentile Probability
+if (quantile(abM,probs=0.5)>0) {
+    pM = 2*(sum(abM<0)/5000000)
+} else {
+    pM = 2*(sum(abM>0)/5000000)
+}
+
+
+#### Percentile Confidence Intervals of Conditional Indirect Effects ####
+
+PCI <- matrix(1:8, nrow = 1, dimnames = list(c("        "), 
+                                             c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+
+PCI[1,1] <- format(round(quantile(abM,c(0.005)), digits = 4), nsmall = 4, scientific = FALSE)
+PCI[1,2] <- format(round(quantile(abM,c(0.025)), digits = 4), nsmall = 4, scientific = FALSE)
+PCI[1,3] <- format(round(quantile(abM,c(0.05)), digits = 4), nsmall = 4, scientific = FALSE)
+PCI[1,4] <- format(round(estM, digits = 4), nsmall = 4, scientific = FALSE)
+PCI[1,5] <- format(round(quantile(abM,c(0.95)), digits = 4), nsmall = 4, scientific = FALSE)
+PCI[1,6] <- format(round(quantile(abM,c(0.975)), digits = 4), nsmall = 4, scientific = FALSE)
+PCI[1,7] <- format(round(quantile(abM,c(0.995)), digits = 4), nsmall = 4, scientific = FALSE)
+PCI[1,8] <- format(round(pM, digits = 4), nsmall = 4, scientific = FALSE)
+
+# Bias-Corrected Factor
+
+zM = qnorm(sum(abM<estM)/5000000)
+
+# Calculate Bias-Corrected Probability
+
+if ((estM>0 & min(abM)>0) | (estM<0 & max(abM)<0)) {
+    pbM = 0
+} else if (qnorm(sum(abM>0)/5000000)+2*zM<0) { 
+    pbM = 2*pnorm((qnorm(sum(abM>0)/5000000)+2*zM))
+} else {
+    pbM = 2*pnorm(-1*(qnorm(sum(abM>0)/5000000)+2*zM))
+}
+
+
+#### Bias-Corrected Confidence Intervals ####
+
+BCCI <- matrix(1:8, nrow = 1, dimnames = list(c("        "), 
+                                              c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+
+BCCI[1,1] <- format(round(quantile(abM,probs=pnorm(2*zM+qnorm(0.005))), digits = 4), nsmall = 4, scientific = FALSE)
+BCCI[1,2] <- format(round(quantile(abM,probs=pnorm(2*zM+qnorm(0.025))), digits = 4), nsmall = 4, scientific = FALSE)
+BCCI[1,3] <- format(round(quantile(abM,probs=pnorm(2*zM+qnorm(0.050))), digits = 4), nsmall = 4, scientific = FALSE)
+BCCI[1,4] <- format(round(estM, digits = 4), nsmall = 4, scientific = FALSE)
+BCCI[1,5] <- format(round(quantile(abM,probs=pnorm(2*zM+qnorm(0.950))), digits = 4), nsmall = 4, scientific = FALSE)
+BCCI[1,6] <- format(round(quantile(abM,probs=pnorm(2*zM+qnorm(0.975))), digits = 4), nsmall = 4, scientific = FALSE)
+BCCI[1,7] <- format(round(quantile(abM,probs=pnorm(2*zM+qnorm(0.995))), digits = 4), nsmall = 4, scientific = FALSE)
+BCCI[1,8] <- format(round(pbM, digits = 4), nsmall = 4, scientific = FALSE)
+
+cat("\n")
+cat("Percentile Confidence Intervals for Indirect Effect", rep("\n", 2))
+rownames(PCI) <- rep("    ", nrow(PCI))
+print(PCI, quote=FALSE, right=TRUE)
+cat("\n")
+
+cat("\n")
+cat("Bias-Corrected Confidence Intervals for Indirect Effect", rep("\n", 2))
+rownames(BCCI) <- rep("    ", nrow(BCCI))
+print(BCCI, quote=FALSE, right=TRUE)
+cat("\n")
+}
+#####
+
+
+##### Only One Moderating Effect Z #####
+if ((NoMod == 1) & (NoModz == 1)) {
+
+# Define estimated parameters for calculating indirect effects
+if (La1 != "NA") a1 <- estcoeff[La1]
+if (La2 != "NA") a2 <- estcoeff[La2]
+if (La3 != "NA") a3 <- estcoeff[La3]
+if (La4 != "NA") a4 <- estcoeff[La4]
+if (Lz1 != "NA") z1 <- estcoeff[Lz1]
+if (Lz2 != "NA") z2 <- estcoeff[Lz2]
+if (Lz3 != "NA") z3 <- estcoeff[Lz3]
+if (Lz4 != "NA") z4 <- estcoeff[Lz4]
+stdZ <- estcoeff[LstdZ]
+
+# Calculate Estimated Index MM 
+if (PoMod == 1) estIMM <- z1*a2*a3*a4
+if (PoMod == 2) estIMM <- a1*z2*a3*a4
+if (PoMod == 3) estIMM <- a1*a2*z3*a4
+if (PoMod == 4) estIMM <- a1*a2*a3*z4
+
+# Capture simulated parameters for calculating indirect effects
+if (La1 != "NA") Sa1 <- mcmc[,La1]
+if (La2 != "NA") Sa2 <- mcmc[,La2]
+if (La3 != "NA") Sa3 <- mcmc[,La3]
+if (La4 != "NA") Sa4 <- mcmc[,La4]
+if (Lz1 != "NA") Sz1 <- mcmc[,Lz1]
+if (Lz2 != "NA") Sz2 <- mcmc[,Lz2]
+if (Lz3 != "NA") Sz3 <- mcmc[,Lz3]
+if (Lz4 != "NA") Sz4 <- mcmc[,Lz4]
+SstdZ <- mcmc[,LstdZ]
+
+# Calculate Simulated Index MM 
+if (PoMod == 1) IndexMM <- Sz1*Sa2*Sa3*Sa4
+if (PoMod == 2) IndexMM <- Sa1*Sz2*Sa3*Sa4
+if (PoMod == 3) IndexMM <- Sa1*Sa2*Sz3*Sa4
+if (PoMod == 4) IndexMM <- Sa1*Sa2*Sa3*Sz4
+##################################
+
+
+#### Percentile and Bias-Corrected Confidence Intervals of Conditional Indirect Effects ####
+
+PCI <- matrix(1:48, nrow = 6, dimnames = list(c("Mean-2sd","Mean-1sd","Mean","Mean+1sd","Mean+2sd","Index MM"), 
+                                              c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+BCCI <- matrix(1:48, nrow = 6, dimnames = list(c("Mean-2sd","Mean-1sd","Mean","Mean+1sd","Mean+2sd","Index MM"), 
+                                               c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+
+for (X in 1:5) {
+  level <- X - 3
+  estX <- (a1+z1*level*stdZ)*(a2+z2*level*stdZ)*(a3+z3*level*stdZ)*(a4+z4*level*stdZ)
+  abX <- (Sa1+Sz1*level*SstdZ)*(Sa2+Sz2*level*SstdZ)*(Sa3+Sz3*level*SstdZ)*(Sa4+Sz4*level*SstdZ)
+  zX = qnorm(sum(abX<estX)/5000000)  # Bias-Corrected Factor
+
+  ## Percentile Confidence Intervals ##
+  PCI[X,1] <- format(round(quantile(abX,c(0.005)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCI[X,2] <- format(round(quantile(abX,c(0.025)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCI[X,3] <- format(round(quantile(abX,c(0.05)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCI[X,4] <- format(round(estX, digits = 4), nsmall = 4, scientific = FALSE)
+  PCI[X,5] <- format(round(quantile(abX,c(0.95)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCI[X,6] <- format(round(quantile(abX,c(0.975)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCI[X,7] <- format(round(quantile(abX,c(0.995)), digits = 4), nsmall = 4, scientific = FALSE)
+
+  # Percentile p-value #
+  if (quantile(abX,probs=0.5)>0) {
+    PCI[X,8] <- format(round(2*(sum(abX<0)/5000000), digits = 4), nsmall = 4, scientific = FALSE)
+  } else {
+    PCI[X,8] <- format(round(2*(sum(abX>0)/5000000), digits = 4), nsmall = 4, scientific = FALSE)
+  }
+
+  ## Bias-Corrected Confidence Intervals ##
+  BCCI[X,1] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.005))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCI[X,2] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.025))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCI[X,3] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.050))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCI[X,4] <- format(round(estX, digits = 4), nsmall = 4, scientific = FALSE)
+  BCCI[X,5] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.950))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCI[X,6] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.975))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCI[X,7] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.995))), digits = 4), nsmall = 4, scientific = FALSE)
+  # Bias-Corrected Probability
+  if ((estX>0 & min(abX)>0) | (estX<0 & max(abX)<0)) {
+    BCCI[X,8] = 0
+  } else if (qnorm(sum(abX>0)/5000000)+2*zX<0) { 
+    BCCI[X,8] = format(round(2*pnorm((qnorm(sum(abX>0)/5000000)+2*zX)), digits = 4), nsmall = 4, scientific = FALSE)
+  } else {
+    BCCI[X,8] = format(round(2*pnorm(-1*(qnorm(sum(abX>0)/5000000)+2*zX)), digits = 4), nsmall = 4, scientific = FALSE)
+  }
+}
+
+# Percentile Confidence Intervals for Index MM
+PCI[6,1] <- format(round(quantile(IndexMM,c(0.005)), digits = 4), nsmall = 4, scientific = FALSE)
+PCI[6,2] <- format(round(quantile(IndexMM,c(0.025)), digits = 4), nsmall = 4, scientific = FALSE)
+PCI[6,3] <- format(round(quantile(IndexMM,c(0.05)), digits = 4), nsmall = 4, scientific = FALSE)
+PCI[6,4] <- format(round(estIMM, digits = 4), nsmall = 4, scientific = FALSE)
+PCI[6,5] <- format(round(quantile(IndexMM,c(0.95)), digits = 4), nsmall = 4, scientific = FALSE)
+PCI[6,6] <- format(round(quantile(IndexMM,c(0.975)), digits = 4), nsmall = 4, scientific = FALSE)
+PCI[6,7] <- format(round(quantile(IndexMM,c(0.995)), digits = 4), nsmall = 4, scientific = FALSE)
+
+# Percentile Probability for Index MM
+if (quantile(IndexMM,probs=0.5)>0) {
+    PCI[6,8] <- format(round(2*(sum(IndexMM<0)/5000000), digits = 4), nsmall = 4, scientific = FALSE)  # Probability
+} else {
+    PCI[6,8] <- format(round(2*(sum(IndexMM>0)/5000000), digits = 4), nsmall = 4, scientific = FALSE)  # Probability
+}
+
+
+# Bias-Corrected Confidence Intervals for Index MM
+zIMM = qnorm(sum(IndexMM<estIMM)/5000000)
+BCCI[6,1] <- format(round(quantile(IndexMM,probs=pnorm(2*zIMM+qnorm(0.005))), digits = 4), nsmall = 4, scientific = FALSE)
+BCCI[6,2] <- format(round(quantile(IndexMM,probs=pnorm(2*zIMM+qnorm(0.025))), digits = 4), nsmall = 4, scientific = FALSE)
+BCCI[6,3] <- format(round(quantile(IndexMM,probs=pnorm(2*zIMM+qnorm(0.050))), digits = 4), nsmall = 4, scientific = FALSE)
+BCCI[6,4] <- format(round(estIMM, digits = 4), nsmall = 4, scientific = FALSE)
+BCCI[6,5] <- format(round(quantile(IndexMM,probs=pnorm(2*zIMM+qnorm(0.950))), digits = 4), nsmall = 4, scientific = FALSE)
+BCCI[6,6] <- format(round(quantile(IndexMM,probs=pnorm(2*zIMM+qnorm(0.975))), digits = 4), nsmall = 4, scientific = FALSE)
+BCCI[6,7] <- format(round(quantile(IndexMM,probs=pnorm(2*zIMM+qnorm(0.995))), digits = 4), nsmall = 4, scientific = FALSE)
+
+# Bias-Corrected Probability for Index MM
+if ((estIMM>0 & min(IndexMM)>0) | (estIMM<0 & max(IndexMM)<0)) {
+    BCCI[6,8] = 0  
+} else if (qnorm(sum(IndexMM>0)/5000000)+2*zIMM<0) { 
+    BCCI[6,8] = format(round(2*pnorm((qnorm(sum(IndexMM>0)/5000000)+2*zIMM)), digits = 4), nsmall = 4, scientific = FALSE)
+} else {
+    BCCI[6,8] = format(round(2*pnorm(-1*(qnorm(sum(IndexMM>0)/5000000)+2*zIMM)), digits = 4), nsmall = 4, scientific = FALSE)
+}
+
+cat("\n")
+cat("Percentile Confidence Intervals for Conditional Indirect Effects", rep("\n", 2))
+print(PCI, quote=FALSE, right=TRUE)
+cat("\n")
+
+cat("\n")
+cat("Bias-Corrected Confidence Intervals for Conditional Indirect Effects", rep("\n", 2))
+print(BCCI, quote=FALSE, right=TRUE)
+cat("\n")
+
+}
+#####
+##
+##
+##### Only One Moderating Effect W #####
+if ((NoMod == 1) & (NoModw == 1)) {
+
+# Define estimated parameters for calculating indirect effects
+if (La1 != "NA") a1 <- estcoeff[La1]
+if (La2 != "NA") a2 <- estcoeff[La2]
+if (La3 != "NA") a3 <- estcoeff[La3]
+if (La4 != "NA") a4 <- estcoeff[La4]
+if (Lw1 != "NA") w1 <- estcoeff[Lw1]
+if (Lw2 != "NA") w2 <- estcoeff[Lw2]
+if (Lw3 != "NA") w3 <- estcoeff[Lw3]
+if (Lw4 != "NA") w4 <- estcoeff[Lw4]
+stdW <- estcoeff[LstdW]
+
+# Calculate Estimated Index MM 
+if (PoMod == 1) estIMM <- w1*a2*a3*a4
+if (PoMod == 2) estIMM <- a1*w2*a3*a4
+if (PoMod == 3) estIMM <- a1*a2*w3*a4
+if (PoMod == 4) estIMM <- a1*a2*a3*w4
+
+# Capture simulated parameters for calculating indirect effects
+if (La1 != "NA") Sa1 <- mcmc[,La1]
+if (La2 != "NA") Sa2 <- mcmc[,La2]
+if (La3 != "NA") Sa3 <- mcmc[,La3]
+if (La4 != "NA") Sa4 <- mcmc[,La4]
+if (Lw1 != "NA") Sw1 <- mcmc[,Lw1]
+if (Lw2 != "NA") Sw2 <- mcmc[,Lw2]
+if (Lw3 != "NA") Sw3 <- mcmc[,Lw3]
+if (Lw4 != "NA") Sw4 <- mcmc[,Lw4]
+SstdW <- mcmc[,LstdW]
+
+# Calculate Simulated Index MM 
+if (PoMod == 1) IndexMM <- Sw1*Sa2*Sa3*Sa4
+if (PoMod == 2) IndexMM <- Sa1*Sw2*Sa3*Sa4
+if (PoMod == 3) IndexMM <- Sa1*Sa2*Sw3*Sa4
+if (PoMod == 4) IndexMM <- Sa1*Sa2*Sa3*Sw4
+##################################
+
+
+#### Percentile and Bias-Corrected Confidence Intervals of Conditional Indirect Effects ####
+
+PCI <- matrix(1:48, nrow = 6, dimnames = list(c("Mean-2sd","Mean-1sd","Mean","Mean+1sd","Mean+2sd","Index MM"), 
+                                              c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+BCCI <- matrix(1:48, nrow = 6, dimnames = list(c("Mean-2sd","Mean-1sd","Mean","Mean+1sd","Mean+2sd","Index MM"), 
+                                               c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+
+for (X in 1:5) {
+  level <- X - 3
+  estX <- (a1+w1*level*stdW)*(a2+w2*level*stdW)*(a3+w3*level*stdW)*(a4+w4*level*stdW)
+  abX <- (Sa1+Sw1*level*SstdW)*(Sa2+Sw2*level*SstdW)*(Sa3+Sw3*level*SstdW)*(Sa4+Sw4*level*SstdW)
+  zX = qnorm(sum(abX<estX)/5000000)  # Bias-Corrected Factor
+
+  ## Percentile Confidence Intervals ##
+  PCI[X,1] <- format(round(quantile(abX,c(0.005)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCI[X,2] <- format(round(quantile(abX,c(0.025)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCI[X,3] <- format(round(quantile(abX,c(0.05)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCI[X,4] <- format(round(estX, digits = 4), nsmall = 4, scientific = FALSE)
+  PCI[X,5] <- format(round(quantile(abX,c(0.95)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCI[X,6] <- format(round(quantile(abX,c(0.975)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCI[X,7] <- format(round(quantile(abX,c(0.995)), digits = 4), nsmall = 4, scientific = FALSE)
+
+  # Percentile p-value #
+  if (quantile(abX,probs=0.5)>0) {
+    PCI[X,8] <- format(round(2*(sum(abX<0)/5000000), digits = 4), nsmall = 4, scientific = FALSE)
+  } else {
+    PCI[X,8] <- format(round(2*(sum(abX>0)/5000000), digits = 4), nsmall = 4, scientific = FALSE)
+  }
+
+  ## Bias-Corrected Confidence Intervals ##
+  BCCI[X,1] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.005))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCI[X,2] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.025))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCI[X,3] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.050))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCI[X,4] <- format(round(estX, digits = 4), nsmall = 4, scientific = FALSE)
+  BCCI[X,5] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.950))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCI[X,6] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.975))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCI[X,7] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.995))), digits = 4), nsmall = 4, scientific = FALSE)
+  # Bias-Corrected Probability
+  if ((estX>0 & min(abX)>0) | (estX<0 & max(abX)<0)) {
+    BCCI[X,8] = 0
+  } else if (qnorm(sum(abX>0)/5000000)+2*zX<0) { 
+    BCCI[X,8] = format(round(2*pnorm((qnorm(sum(abX>0)/5000000)+2*zX)), digits = 4), nsmall = 4, scientific = FALSE)
+  } else {
+    BCCI[X,8] = format(round(2*pnorm(-1*(qnorm(sum(abX>0)/5000000)+2*zX)), digits = 4), nsmall = 4, scientific = FALSE)
+  }
+}
+
+# Percentile Confidence Intervals for Index MM
+PCI[6,1] <- format(round(quantile(IndexMM,c(0.005)), digits = 4), nsmall = 4, scientific = FALSE)
+PCI[6,2] <- format(round(quantile(IndexMM,c(0.025)), digits = 4), nsmall = 4, scientific = FALSE)
+PCI[6,3] <- format(round(quantile(IndexMM,c(0.05)), digits = 4), nsmall = 4, scientific = FALSE)
+PCI[6,4] <- format(round(estIMM, digits = 4), nsmall = 4, scientific = FALSE)
+PCI[6,5] <- format(round(quantile(IndexMM,c(0.95)), digits = 4), nsmall = 4, scientific = FALSE)
+PCI[6,6] <- format(round(quantile(IndexMM,c(0.975)), digits = 4), nsmall = 4, scientific = FALSE)
+PCI[6,7] <- format(round(quantile(IndexMM,c(0.995)), digits = 4), nsmall = 4, scientific = FALSE)
+
+# Percentile Probability for Index MM
+if (quantile(IndexMM,probs=0.5)>0) {
+    PCI[6,8] <- format(round(2*(sum(IndexMM<0)/5000000), digits = 4), nsmall = 4, scientific = FALSE)  # Probability
+} else {
+    PCI[6,8] <- format(round(2*(sum(IndexMM>0)/5000000), digits = 4), nsmall = 4, scientific = FALSE)  # Probability
+}
+
+
+# Bias-Corrected Confidence Intervals for Index MM
+zIMM = qnorm(sum(IndexMM<estIMM)/5000000)
+BCCI[6,1] <- format(round(quantile(IndexMM,probs=pnorm(2*zIMM+qnorm(0.005))), digits = 4), nsmall = 4, scientific = FALSE)
+BCCI[6,2] <- format(round(quantile(IndexMM,probs=pnorm(2*zIMM+qnorm(0.025))), digits = 4), nsmall = 4, scientific = FALSE)
+BCCI[6,3] <- format(round(quantile(IndexMM,probs=pnorm(2*zIMM+qnorm(0.050))), digits = 4), nsmall = 4, scientific = FALSE)
+BCCI[6,4] <- format(round(estIMM, digits = 4), nsmall = 4, scientific = FALSE)
+BCCI[6,5] <- format(round(quantile(IndexMM,probs=pnorm(2*zIMM+qnorm(0.950))), digits = 4), nsmall = 4, scientific = FALSE)
+BCCI[6,6] <- format(round(quantile(IndexMM,probs=pnorm(2*zIMM+qnorm(0.975))), digits = 4), nsmall = 4, scientific = FALSE)
+BCCI[6,7] <- format(round(quantile(IndexMM,probs=pnorm(2*zIMM+qnorm(0.995))), digits = 4), nsmall = 4, scientific = FALSE)
+
+# Bias-Corrected Probability for Index MM
+if ((estIMM>0 & min(IndexMM)>0) | (estIMM<0 & max(IndexMM)<0)) {
+    BCCI[6,8] = 0  
+} else if (qnorm(sum(IndexMM>0)/5000000)+2*zIMM<0) { 
+    BCCI[6,8] = format(round(2*pnorm((qnorm(sum(IndexMM>0)/5000000)+2*zIMM)), digits = 4), nsmall = 4, scientific = FALSE)
+} else {
+    BCCI[6,8] = format(round(2*pnorm(-1*(qnorm(sum(IndexMM>0)/5000000)+2*zIMM)), digits = 4), nsmall = 4, scientific = FALSE)
+}
+
+cat("\n")
+cat("Percentile Confidence Intervals for Conditional Indirect Effects", rep("\n", 2))
+print(PCI, quote=FALSE, right=TRUE)
+cat("\n")
+
+cat("\n")
+cat("Bias-Corrected Confidence Intervals for Conditional Indirect Effects", rep("\n", 2))
+print(BCCI, quote=FALSE, right=TRUE)
+cat("\n")
+
+}
+#####
+##
+##
+##### More Than One Moderating Effect for Z only #####
+if ((NoMod > 1) & (NoModw == 0)) {
+
+# Define estimated parameters for calculating indirect effects
+if (La1 != "NA") a1 <- estcoeff[La1]
+if (La2 != "NA") a2 <- estcoeff[La2]
+if (La3 != "NA") a3 <- estcoeff[La3]
+if (La4 != "NA") a4 <- estcoeff[La4]
+if (Lz1 != "NA") z1 <- estcoeff[Lz1]
+if (Lz2 != "NA") z2 <- estcoeff[Lz2]
+if (Lz3 != "NA") z3 <- estcoeff[Lz3]
+if (Lz4 != "NA") z4 <- estcoeff[Lz4]
+stdZ <- estcoeff[LstdZ]
+
+# Capture simulated parameters for calculating indirect effects
+if (La1 != "NA") Sa1 <- mcmc[,La1]
+if (La2 != "NA") Sa2 <- mcmc[,La2]
+if (La3 != "NA") Sa3 <- mcmc[,La3]
+if (La4 != "NA") Sa4 <- mcmc[,La4]
+if (Lz1 != "NA") Sz1 <- mcmc[,Lz1]
+if (Lz2 != "NA") Sz2 <- mcmc[,Lz2]
+if (Lz3 != "NA") Sz3 <- mcmc[,Lz3]
+if (Lz4 != "NA") Sz4 <- mcmc[,Lz4]
+SstdZ <- mcmc[,LstdZ]
+
+#### Percentile and Bias-Corrected Confidence Intervals of Conditional Indirect Effects ####
+
+PCI <- matrix(1:40, nrow = 5, dimnames = list(c("Mean-2sd","Mean-1sd","Mean","Mean+1sd","Mean+2sd"), 
+                                              c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+BCCI <- matrix(1:40, nrow = 5, dimnames = list(c("Mean-2sd","Mean-1sd","Mean","Mean+1sd","Mean+2sd"), 
+                                               c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+
+for (X in 1:5) {
+  level <- X - 3
+  estX <- (a1+z1*level*stdZ)*(a2+z2*level*stdZ)*(a3+z3*level*stdZ)*(a4+z4*level*stdZ)
+  abX <- (Sa1+Sz1*level*SstdZ)*(Sa2+Sz2*level*SstdZ)*(Sa3+Sz3*level*SstdZ)*(Sa4+Sz4*level*SstdZ)
+  zX = qnorm(sum(abX<estX)/5000000)  # Bias-Corrected Factor
+
+  ## Percentile Confidence Intervals ##
+  PCI[X,1] <- format(round(quantile(abX,c(0.005)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCI[X,2] <- format(round(quantile(abX,c(0.025)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCI[X,3] <- format(round(quantile(abX,c(0.05)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCI[X,4] <- format(round(estX, digits = 4), nsmall = 4, scientific = FALSE)
+  PCI[X,5] <- format(round(quantile(abX,c(0.95)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCI[X,6] <- format(round(quantile(abX,c(0.975)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCI[X,7] <- format(round(quantile(abX,c(0.995)), digits = 4), nsmall = 4, scientific = FALSE)
+
+  # Percentile p-value #
+  if (quantile(abX,probs=0.5)>0) {
+    PCI[X,8] <- format(round(2*(sum(abX<0)/5000000), digits = 4), nsmall = 4, scientific = FALSE)
+  } else {
+    PCI[X,8] <- format(round(2*(sum(abX>0)/5000000), digits = 4), nsmall = 4, scientific = FALSE)
+  }
+
+  ## Bias-Corrected Confidence Intervals ##
+  BCCI[X,1] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.005))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCI[X,2] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.025))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCI[X,3] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.050))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCI[X,4] <- format(round(estX, digits = 4), nsmall = 4, scientific = FALSE)
+  BCCI[X,5] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.950))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCI[X,6] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.975))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCI[X,7] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.995))), digits = 4), nsmall = 4, scientific = FALSE)
+  # Bias-Corrected Probability
+  if ((estX>0 & min(abX)>0) | (estX<0 & max(abX)<0)) {
+    BCCI[X,8] = 0
+  } else if (qnorm(sum(abX>0)/5000000)+2*zX<0) { 
+    BCCI[X,8] = format(round(2*pnorm((qnorm(sum(abX>0)/5000000)+2*zX)), digits = 4), nsmall = 4, scientific = FALSE)
+  } else {
+    BCCI[X,8] = format(round(2*pnorm(-1*(qnorm(sum(abX>0)/5000000)+2*zX)), digits = 4), nsmall = 4, scientific = FALSE)
+  }
+}
+
+cat("\n")
+cat("Percentile Confidence Intervals for Conditional Indirect Effects", rep("\n", 2))
+print(PCI, quote=FALSE, right=TRUE)
+cat("\n")
+cat("Index of Moderated Mediation is not defined for two or more moderating effects", rep("\n",3))
+
+cat("\n")
+cat("Bias-Corrected Confidence Intervals for Conditional Indirect Effects", rep("\n", 2))
+print(BCCI, quote=FALSE, right=TRUE)
+cat("\n")
+cat("Index of Moderated Mediation is not defined for two or more moderating effects","\n")
+}
+#####
+
+##### More Than One Moderating Effect for W only #####
+if ((NoMod > 1) & (NoModz == 0)) {
+
+# Define estimated parameters for calculating indirect effects
+if (La1 != "NA") a1 <- estcoeff[La1]
+if (La2 != "NA") a2 <- estcoeff[La2]
+if (La3 != "NA") a3 <- estcoeff[La3]
+if (La4 != "NA") a4 <- estcoeff[La4]
+if (Lw1 != "NA") w1 <- estcoeff[Lw1]
+if (Lw2 != "NA") w2 <- estcoeff[Lw2]
+if (Lw3 != "NA") w3 <- estcoeff[Lw3]
+if (Lw4 != "NA") w4 <- estcoeff[Lw4]
+stdW <- estcoeff[LstdW]
+
+# Capture simulated parameters for calculating indirect effects
+if (La1 != "NA") Sa1 <- mcmc[,La1]
+if (La2 != "NA") Sa2 <- mcmc[,La2]
+if (La3 != "NA") Sa3 <- mcmc[,La3]
+if (La4 != "NA") Sa4 <- mcmc[,La4]
+if (Lw1 != "NA") Sw1 <- mcmc[,Lw1]
+if (Lw2 != "NA") Sw2 <- mcmc[,Lw2]
+if (Lw3 != "NA") Sw3 <- mcmc[,Lw3]
+if (Lw4 != "NA") Sw4 <- mcmc[,Lw4]
+SstdW <- mcmc[,LstdW]
+
+#### Percentile and Bias-Corrected Confidence Intervals of Conditional Indirect Effects ####
+
+PCI <- matrix(1:40, nrow = 5, dimnames = list(c("Mean-2sd","Mean-1sd","Mean","Mean+1sd","Mean+2sd"), 
+                                              c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+BCCI <- matrix(1:40, nrow = 5, dimnames = list(c("Mean-2sd","Mean-1sd","Mean","Mean+1sd","Mean+2sd"), 
+                                              c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+
+for (X in 1:5) {
+  level <- X - 3
+  estX <- (a1+w1*level*stdW)*(a2+w2*level*stdW)*(a3+w3*level*stdW)*(a4+w4*level*stdW)
+  abX <- (Sa1+Sw1*level*SstdW)*(Sa2+Sw2*level*SstdW)*(Sa3+Sw3*level*SstdW)*(Sa4+Sw4*level*SstdW)
+  zX = qnorm(sum(abX<estX)/5000000)  # Bias-Corrected Factor
+
+  ## Percentile Confidence Intervals ##
+  PCI[X,1] <- format(round(quantile(abX,c(0.005)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCI[X,2] <- format(round(quantile(abX,c(0.025)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCI[X,3] <- format(round(quantile(abX,c(0.05)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCI[X,4] <- format(round(estX, digits = 4), nsmall = 4, scientific = FALSE)
+  PCI[X,5] <- format(round(quantile(abX,c(0.95)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCI[X,6] <- format(round(quantile(abX,c(0.975)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCI[X,7] <- format(round(quantile(abX,c(0.995)), digits = 4), nsmall = 4, scientific = FALSE)
+
+  # Percentile p-value #
+  if (quantile(abX,probs=0.5)>0) {
+    PCI[X,8] <- format(round(2*(sum(abX<0)/5000000), digits = 4), nsmall = 4, scientific = FALSE)
+  } else {
+    PCI[X,8] <- format(round(2*(sum(abX>0)/5000000), digits = 4), nsmall = 4, scientific = FALSE)
+  }
+
+  ## Bias-Corrected Confidence Intervals ##
+  BCCI[X,1] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.005))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCI[X,2] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.025))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCI[X,3] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.050))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCI[X,4] <- format(round(estX, digits = 4), nsmall = 4, scientific = FALSE)
+  BCCI[X,5] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.950))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCI[X,6] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.975))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCI[X,7] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.995))), digits = 4), nsmall = 4, scientific = FALSE)
+  # Bias-Corrected Probability
+  if ((estX>0 & min(abX)>0) | (estX<0 & max(abX)<0)) {
+    BCCI[X,8] = 0
+  } else if (qnorm(sum(abX>0)/5000000)+2*zX<0) { 
+    BCCI[X,8] = format(round(2*pnorm((qnorm(sum(abX>0)/5000000)+2*zX)), digits = 4), nsmall = 4, scientific = FALSE)
+  } else {
+    BCCI[X,8] = format(round(2*pnorm(-1*(qnorm(sum(abX>0)/5000000)+2*zX)), digits = 4), nsmall = 4, scientific = FALSE)
+  }
+}
+
+
+cat("\n")
+cat("Percentile Confidence Intervals for Conditional Indirect Effects", rep("\n", 2))
+print(PCI, quote=FALSE, right=TRUE)
+cat("\n")
+cat("Index of Moderated Mediation is not defined for two or more moderating effects", rep("\n",3))
+
+cat("\n")
+cat("Bias-Corrected Confidence Intervals for Conditional Indirect Effects", rep("\n", 2))
+print(BCCI, quote=FALSE, right=TRUE)
+cat("\n")
+cat("Index of Moderated Mediation is not defined for two or more moderating effects","\n")
+}
+#####
+
+##### More Than One Moderating Effect for Z & W #####
+if ((NoMod > 1) & (NoModz != 0) & (NoModw != 0)) {
+
+# Define estimated parameters for calculating indirect effects
+if (La1 != "NA") a1 <- estcoeff[La1]
+if (La2 != "NA") a2 <- estcoeff[La2]
+if (La3 != "NA") a3 <- estcoeff[La3]
+if (La4 != "NA") a4 <- estcoeff[La4]
+if (Lz1 != "NA") z1 <- estcoeff[Lz1]
+if (Lz2 != "NA") z2 <- estcoeff[Lz2]
+if (Lz3 != "NA") z3 <- estcoeff[Lz3]
+if (Lz4 != "NA") z4 <- estcoeff[Lz4]
+if (Lw1 != "NA") w1 <- estcoeff[Lw1]
+if (Lw2 != "NA") w2 <- estcoeff[Lw2]
+if (Lw3 != "NA") w3 <- estcoeff[Lw3]
+if (Lw4 != "NA") w4 <- estcoeff[Lw4]
+if (Lzw1 != "NA") zw1 <- estcoeff[Lzw1]
+if (Lzw2 != "NA") zw2 <- estcoeff[Lzw2]
+if (Lzw3 != "NA") zw3 <- estcoeff[Lzw3]
+if (Lzw4 != "NA") zw4 <- estcoeff[Lzw4]
+stdZ <- estcoeff[LstdZ]
+stdW <- estcoeff[LstdW]
+
+# Capture simulated parameters for calculating indirect effects
+if (La1 != "NA") Sa1 <- mcmc[,La1]
+if (La2 != "NA") Sa2 <- mcmc[,La2]
+if (La3 != "NA") Sa3 <- mcmc[,La3]
+if (La4 != "NA") Sa4 <- mcmc[,La4]
+if (Lz1 != "NA") Sz1 <- mcmc[,Lz1]
+if (Lz2 != "NA") Sz2 <- mcmc[,Lz2]
+if (Lz3 != "NA") Sz3 <- mcmc[,Lz3]
+if (Lz4 != "NA") Sz4 <- mcmc[,Lz4]
+if (Lw1 != "NA") Sw1 <- mcmc[,Lw1]
+if (Lw2 != "NA") Sw2 <- mcmc[,Lw2]
+if (Lw3 != "NA") Sw3 <- mcmc[,Lw3]
+if (Lw4 != "NA") Sw4 <- mcmc[,Lw4]
+if (Lzw1 != "NA") Szw1 <- mcmc[,Lzw1]
+if (Lzw2 != "NA") Szw2 <- mcmc[,Lzw2]
+if (Lzw3 != "NA") Szw3 <- mcmc[,Lzw3]
+if (Lzw4 != "NA") Szw4 <- mcmc[,Lzw4]
+SstdZ <- mcmc[,LstdZ]
+SstdW <- mcmc[,LstdW]
+
+#### Percentile and Bias-Corrected Confidence Intervals of Conditional Indirect Effects ####
+
+PCI <- array(data = 1:200, 
+             dim = c(5, 8, 5),
+             dimnames = list(c("Z = Mean-2SD","Z = Mean-1SD", "Z = Mean", "Z = Mean+1SD", "Z = Mean+2SD"),
+                             c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value"),
+                             c("W = Mean-2SD","W = Mean - 1SD", "W = Mean", "W = Mean+1SD", "W = Mean+2SD")))
+BCCI <- array(data = 1:200, 
+             dim = c(5, 8, 5),
+             dimnames = list(c("Z = Mean-2SD","Z = Mean-1SD", "Z = Mean", "Z = Mean+1SD", "Z = Mean+2SD"),
+                             c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value"),
+                             c("W = Mean-2SD","W = Mean - 1SD", "W = Mean", "W = Mean+1SD", "W = Mean+2SD")))
+
+for (Z in 1:5) {
+  for (W in 1:5) {
+    levelZ <- Z - 3
+    levelW <- W - 3
+    estX <- (a1+z1*levelZ*stdZ+w1*levelW*stdW+zw1*levelZ*stdZ*levelW*stdW)*
+            (a2+z2*levelZ*stdZ+w2*levelW*stdW+zw2*levelZ*stdZ*levelW*stdW)*
+            (a3+z3*levelZ*stdZ+w3*levelW*stdW+zw3*levelZ*stdZ*levelW*stdW)*
+            (a4+z4*levelZ*stdZ+w4*levelW*stdW+zw4*levelZ*stdZ*levelW*stdW)
+    abX <- (Sa1+Sz1*levelZ*SstdZ+Sw1*levelW*SstdW+Szw1*levelZ*SstdZ*levelW*SstdW)*
+           (Sa2+Sz2*levelZ*SstdZ+Sw2*levelW*SstdW+Szw2*levelZ*SstdZ*levelW*SstdW)*
+           (Sa3+Sz3*levelZ*SstdZ+Sw3*levelW*SstdW+Szw3*levelZ*SstdZ*levelW*SstdW)*
+           (Sa4+Sz4*levelZ*SstdZ+Sw4*levelW*SstdW+Szw4*levelZ*SstdZ*levelW*SstdW)
+    zX = qnorm(sum(abX<estX)/5000000)  # Bias-Corrected Factor
+
+    ## Percentile Confidence Intervals ##
+    PCI[Z,1,W] <- format(round(quantile(abX,c(0.005)), digits = 4), nsmall = 4, scientific = FALSE)
+    PCI[Z,2,W] <- format(round(quantile(abX,c(0.025)), digits = 4), nsmall = 4, scientific = FALSE)
+    PCI[Z,3,W] <- format(round(quantile(abX,c(0.05)), digits = 4), nsmall = 4, scientific = FALSE)
+    PCI[Z,4,W] <- format(round(estX, digits = 4), nsmall = 4, scientific = FALSE)
+    PCI[Z,5,W] <- format(round(quantile(abX,c(0.95)), digits = 4), nsmall = 4, scientific = FALSE)
+    PCI[Z,6,W] <- format(round(quantile(abX,c(0.975)), digits = 4), nsmall = 4, scientific = FALSE)
+    PCI[Z,7,W] <- format(round(quantile(abX,c(0.995)), digits = 4), nsmall = 4, scientific = FALSE)
+
+    # Percentile p-value #
+    if (quantile(abX,probs=0.5)>0) {
+      PCI[Z,8,W] <- format(round(2*(sum(abX<0)/5000000), digits = 4), nsmall = 4, scientific = FALSE)
+    } else {
+      PCI[Z,8,W] <- format(round(2*(sum(abX>0)/5000000), digits = 4), nsmall = 4, scientific = FALSE)
+    }
+
+    ## Bias-Corrected Confidence Intervals ##
+    BCCI[Z,1,W] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.005))), digits = 4), nsmall = 4, scientific = FALSE)
+    BCCI[Z,2,W] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.025))), digits = 4), nsmall = 4, scientific = FALSE)
+    BCCI[Z,3,W] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.050))), digits = 4), nsmall = 4, scientific = FALSE)
+    BCCI[Z,4,W] <- format(round(estX, digits = 4), nsmall = 4, scientific = FALSE)
+    BCCI[Z,5,W] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.950))), digits = 4), nsmall = 4, scientific = FALSE)
+    BCCI[Z,6,W] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.975))), digits = 4), nsmall = 4, scientific = FALSE)
+    BCCI[Z,7,W] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.995))), digits = 4), nsmall = 4, scientific = FALSE)
+    # Bias-Corrected Probability
+    if ((estX>0 & min(abX)>0) | (estX<0 & max(abX)<0)) {
+      BCCI[Z,8,W] = 0
+    } else if (qnorm(sum(abX>0)/5000000)+2*zX<0) { 
+      BCCI[Z,8,W] = format(round(2*pnorm((qnorm(sum(abX>0)/5000000)+2*zX)), digits = 4), nsmall = 4, scientific = FALSE)
+    } else {
+      BCCI[Z,8,W] = format(round(2*pnorm(-1*(qnorm(sum(abX>0)/5000000)+2*zX)), digits = 4), nsmall = 4, scientific = FALSE)
+    }
+  }
+}
+
+
+cat("\n")
+cat("Percentile Confidence Intervals for Conditional Indirect Effects", rep("\n", 2))
+print(PCI, quote=FALSE, right=TRUE)
+#cat("\n")
+cat("Note: Index of Moderated Mediation is not defined for two or more moderating effects", rep("\n",3))
+
+cat("\n")
+cat("Bias-Corrected Confidence Intervals for Conditional Indirect Effects", rep("\n", 2))
+print(BCCI, quote=FALSE, right=TRUE)
+#cat("\n")
+cat("Note: Index of Moderated Mediation is not defined for two or more moderating effects","\n")
+
+## Slope Difference Tests ##
+PCISDT <- matrix(1:48, nrow = 6, dimnames = list(c("HiZ/HiW - HiZ/LoW", "HiZ/HiW - LoZ/HiW", "HiZ/LoW - LoZ/LoW", "LoZ/HiW - LoZ/LoW", "HiZ/HiW - LoZ/LoW", "HiZ/LoW - LoZ/HiW"), 
+                                              c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+BCCISDT <- matrix(1:48, nrow = 6, dimnames = list(c("HiZ/HiW - HiZ/LoW","HiZ/HiW - LoZ/HiW","HiZ/LoW - LoZ/LoW","LoZ/HiW - LoZ/LoW","HiZ/HiW - LoZ/LoW", "HiZ/LoW - LoZ/HiW"), 
+                                               c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+
+
+## Slope Difference Test 1 "HiZ/HiW - HiZ/LoW" ##
+  estX <- (a1+z1*stdZ+w1*stdW+zw1*stdZ*stdW)*(a2+z2*stdZ+w2*stdW+zw2*stdZ*stdW)*(a3+z3*stdZ+w3*stdW+zw3*stdZ*stdW)*(a4+z4*stdZ+w4*stdW+zw4*stdZ*stdW) -
+          (a1+z1*stdZ-w1*stdW-zw1*stdZ*stdW)*(a2+z2*stdZ-w2*stdW-zw2*stdZ*stdW)*(a3+z3*stdZ-w3*stdW-zw3*stdZ*stdW)*(a4+z4*stdZ-w4*stdW-zw4*stdZ*stdW)
+  abX <- (Sa1+Sz1*SstdZ+Sw1*SstdW+Szw1*SstdZ*SstdW)*(Sa2+Sz2*SstdZ+Sw2*SstdW+Szw2*SstdZ*SstdW)*(Sa3+Sz3*SstdZ+Sw3*SstdW+Szw3*SstdZ*SstdW)*(Sa4+Sz4*SstdZ+Sw4*SstdW+Szw4*SstdZ*SstdW) -
+         (Sa1+Sz1*SstdZ-Sw1*SstdW-Szw1*SstdZ*SstdW)*(Sa2+Sz2*SstdZ-Sw2*SstdW-Szw2*SstdZ*SstdW)*(Sa3+Sz3*SstdZ-Sw3*SstdW-Szw3*SstdZ*SstdW)*(Sa4+Sz4*SstdZ-Sw4*SstdW-Szw4*SstdZ*SstdW)
+  zX = qnorm(sum(abX<estX)/5000000)  # Bias-Corrected Factor
+
+  ## Percentile Confidence Intervals ##
+  PCISDT[1,1] <- format(round(quantile(abX,c(0.005)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[1,2] <- format(round(quantile(abX,c(0.025)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[1,3] <- format(round(quantile(abX,c(0.05)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[1,4] <- format(round(estX, digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[1,5] <- format(round(quantile(abX,c(0.95)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[1,6] <- format(round(quantile(abX,c(0.975)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[1,7] <- format(round(quantile(abX,c(0.995)), digits = 4), nsmall = 4, scientific = FALSE)
+
+  # Percentile p-value #
+  if (quantile(abX,probs=0.5)>0) {
+    PCISDT[1,8] <- format(round(2*(sum(abX<0)/5000000), digits = 4), nsmall = 4, scientific = FALSE)
+  } else {
+    PCISDT[1,8] <- format(round(2*(sum(abX>0)/5000000), digits = 4), nsmall = 4, scientific = FALSE)
+  }
+
+  ## Bias-Corrected Confidence Intervals ##
+  BCCISDT[1,1] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.005))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[1,2] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.025))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[1,3] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.050))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[1,4] <- format(round(estX, digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[1,5] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.950))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[1,6] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.975))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[1,7] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.995))), digits = 4), nsmall = 4, scientific = FALSE)
+  # Bias-Corrected Probability
+  if ((estX>0 & min(abX)>0) | (estX<0 & max(abX)<0)) {
+    BCCISDT[1,8] = 0
+  } else if (qnorm(sum(abX>0)/5000000)+2*zX<0) { 
+    BCCISDT[1,8] = format(round(2*pnorm((qnorm(sum(abX>0)/5000000)+2*zX)), digits = 4), nsmall = 4, scientific = FALSE)
+  } else {
+    BCCISDT[1,8] = format(round(2*pnorm(-1*(qnorm(sum(abX>0)/5000000)+2*zX)), digits = 4), nsmall = 4, scientific = FALSE)
+  }
+
+
+## Slope Difference Test 2 "HiZ/HiW - LoZ/HiW" ##
+  estX <- (a1+z1*stdZ+w1*stdW+zw1*stdZ*stdW)*(a2+z2*stdZ+w2*stdW+zw2*stdZ*stdW)*(a3+z3*stdZ+w3*stdW+zw3*stdZ*stdW)*(a4+z4*stdZ+w4*stdW+zw4*stdZ*stdW) -
+          (a1-z1*stdZ+w1*stdW-zw1*stdZ*stdW)*(a2-z2*stdZ+w2*stdW-zw2*stdZ*stdW)*(a3-z3*stdZ+w3*stdW-zw3*stdZ*stdW)*(a4-z4*stdZ+w4*stdW-zw4*stdZ*stdW)
+  abX <- (Sa1+Sz1*SstdZ+Sw1*SstdW+Szw1*SstdZ*SstdW)*(Sa2+Sz2*SstdZ+Sw2*SstdW+Szw2*SstdZ*SstdW)*(Sa3+Sz3*SstdZ+Sw3*SstdW+Szw3*SstdZ*SstdW)*(Sa4+Sz4*SstdZ+Sw4*SstdW+Szw4*SstdZ*SstdW) -
+         (Sa1-Sz1*SstdZ+Sw1*SstdW-Szw1*SstdZ*SstdW)*(Sa2-Sz2*SstdZ+Sw2*SstdW-Szw2*SstdZ*SstdW)*(Sa3-Sz3*SstdZ+Sw3*SstdW-Szw3*SstdZ*SstdW)*(Sa4-Sz4*SstdZ+Sw4*SstdW-Szw4*SstdZ*SstdW)
+  zX = qnorm(sum(abX<estX)/5000000)  # Bias-Corrected Factor
+
+  ## Percentile Confidence Intervals ##
+  PCISDT[2,1] <- format(round(quantile(abX,c(0.005)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[2,2] <- format(round(quantile(abX,c(0.025)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[2,3] <- format(round(quantile(abX,c(0.05)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[2,4] <- format(round(estX, digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[2,5] <- format(round(quantile(abX,c(0.95)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[2,6] <- format(round(quantile(abX,c(0.975)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[2,7] <- format(round(quantile(abX,c(0.995)), digits = 4), nsmall = 4, scientific = FALSE)
+
+  # Percentile p-value #
+  if (quantile(abX,probs=0.5)>0) {
+    PCISDT[2,8] <- format(round(2*(sum(abX<0)/5000000), digits = 4), nsmall = 4, scientific = FALSE)
+  } else {
+    PCISDT[2,8] <- format(round(2*(sum(abX>0)/5000000), digits = 4), nsmall = 4, scientific = FALSE)
+  }
+
+  ## Bias-Corrected Confidence Intervals ##
+  BCCISDT[2,1] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.005))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[2,2] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.025))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[2,3] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.050))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[2,4] <- format(round(estX, digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[2,5] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.950))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[2,6] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.975))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[2,7] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.995))), digits = 4), nsmall = 4, scientific = FALSE)
+  # Bias-Corrected Probability
+  if ((estX>0 & min(abX)>0) | (estX<0 & max(abX)<0)) {
+    BCCISDT[2,8] = 0
+  } else if (qnorm(sum(abX>0)/5000000)+2*zX<0) { 
+    BCCISDT[2,8] = format(round(2*pnorm((qnorm(sum(abX>0)/5000000)+2*zX)), digits = 4), nsmall = 4, scientific = FALSE)
+  } else {
+    BCCISDT[2,8] = format(round(2*pnorm(-1*(qnorm(sum(abX>0)/5000000)+2*zX)), digits = 4), nsmall = 4, scientific = FALSE)
+  }
+
+
+## Slope Difference Test 3 "HiZ/LoW - LoZ/LoW" ##
+  estX <- (a1+z1*stdZ-w1*stdW-zw1*stdZ*stdW)*(a2+z2*stdZ-w2*stdW-zw2*stdZ*stdW)*(a3+z3*stdZ-w3*stdW-zw3*stdZ*stdW)*(a4+z4*stdZ-w4*stdW-zw4*stdZ*stdW) -
+          (a1-z1*stdZ-w1*stdW+zw1*stdZ*stdW)*(a2-z2*stdZ-w2*stdW+zw2*stdZ*stdW)*(a3-z3*stdZ-w3*stdW+zw3*stdZ*stdW)*(a4-z4*stdZ-w4*stdW+zw4*stdZ*stdW)
+  abX <- (Sa1+Sz1*SstdZ-Sw1*SstdW-Szw1*SstdZ*SstdW)*(Sa2+Sz2*SstdZ-Sw2*SstdW-Szw2*SstdZ*SstdW)*(Sa3+Sz3*SstdZ-Sw3*SstdW-Szw3*SstdZ*SstdW)*(Sa4+Sz4*SstdZ-Sw4*SstdW-Szw4*SstdZ*SstdW) -
+         (Sa1-Sz1*SstdZ-Sw1*SstdW+Szw1*SstdZ*SstdW)*(Sa2-Sz2*SstdZ-Sw2*SstdW+Szw2*SstdZ*SstdW)*(Sa3-Sz3*SstdZ-Sw3*SstdW+Szw3*SstdZ*SstdW)*(Sa4-Sz4*SstdZ-Sw4*SstdW+Szw4*SstdZ*SstdW)
+  zX = qnorm(sum(abX<estX)/5000000)  # Bias-Corrected Factor
+
+  ## Percentile Confidence Intervals ##
+  PCISDT[3,1] <- format(round(quantile(abX,c(0.005)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[3,2] <- format(round(quantile(abX,c(0.025)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[3,3] <- format(round(quantile(abX,c(0.05)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[3,4] <- format(round(estX, digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[3,5] <- format(round(quantile(abX,c(0.95)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[3,6] <- format(round(quantile(abX,c(0.975)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[3,7] <- format(round(quantile(abX,c(0.995)), digits = 4), nsmall = 4, scientific = FALSE)
+
+  # Percentile p-value #
+  if (quantile(abX,probs=0.5)>0) {
+    PCISDT[3,8] <- format(round(2*(sum(abX<0)/5000000), digits = 4), nsmall = 4, scientific = FALSE)
+  } else {
+    PCISDT[3,8] <- format(round(2*(sum(abX>0)/5000000), digits = 4), nsmall = 4, scientific = FALSE)
+  }
+
+  ## Bias-Corrected Confidence Intervals ##
+  BCCISDT[3,1] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.005))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[3,2] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.025))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[3,3] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.050))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[3,4] <- format(round(estX, digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[3,5] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.950))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[3,6] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.975))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[3,7] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.995))), digits = 4), nsmall = 4, scientific = FALSE)
+  # Bias-Corrected Probability
+  if ((estX>0 & min(abX)>0) | (estX<0 & max(abX)<0)) {
+    BCCISDT[3,8] = 0
+  } else if (qnorm(sum(abX>0)/5000000)+2*zX<0) { 
+    BCCISDT[3,8] = format(round(2*pnorm((qnorm(sum(abX>0)/5000000)+2*zX)), digits = 4), nsmall = 4, scientific = FALSE)
+  } else {
+    BCCISDT[3,8] = format(round(2*pnorm(-1*(qnorm(sum(abX>0)/5000000)+2*zX)), digits = 4), nsmall = 4, scientific = FALSE)
+  }
+
+
+## Slope Difference Test 4 "LoZ/HiW - LoZ/LoW" ##
+  estX <- (a1-z1*stdZ+w1*stdW-zw1*stdZ*stdW)*(a2-z2*stdZ+w2*stdW-zw2*stdZ*stdW)*(a3-z3*stdZ+w3*stdW-zw3*stdZ*stdW)*(a4-z4*stdZ+w4*stdW-zw4*stdZ*stdW) -
+          (a1-z1*stdZ-w1*stdW+zw1*stdZ*stdW)*(a2-z2*stdZ-w2*stdW+zw2*stdZ*stdW)*(a3-z3*stdZ-w3*stdW+zw3*stdZ*stdW)*(a4-z4*stdZ-w4*stdW+zw4*stdZ*stdW)
+  abX <- (Sa1-Sz1*SstdZ+Sw1*SstdW-Szw1*SstdZ*SstdW)*(Sa2-Sz2*SstdZ+Sw2*SstdW-Szw2*SstdZ*SstdW)*(Sa3-Sz3*SstdZ+Sw3*SstdW-Szw3*SstdZ*SstdW)*(Sa4-Sz4*SstdZ+Sw4*SstdW-Szw4*SstdZ*SstdW) -
+         (Sa1-Sz1*SstdZ-Sw1*SstdW+Szw1*SstdZ*SstdW)*(Sa2-Sz2*SstdZ-Sw2*SstdW+Szw2*SstdZ*SstdW)*(Sa3-Sz3*SstdZ-Sw3*SstdW+Szw3*SstdZ*SstdW)*(Sa4-Sz4*SstdZ-Sw4*SstdW+Szw4*SstdZ*SstdW)
+  zX = qnorm(sum(abX<estX)/5000000)  # Bias-Corrected Factor
+
+  ## Percentile Confidence Intervals ##
+  PCISDT[4,1] <- format(round(quantile(abX,c(0.005)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[4,2] <- format(round(quantile(abX,c(0.025)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[4,3] <- format(round(quantile(abX,c(0.05)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[4,4] <- format(round(estX, digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[4,5] <- format(round(quantile(abX,c(0.95)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[4,6] <- format(round(quantile(abX,c(0.975)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[4,7] <- format(round(quantile(abX,c(0.995)), digits = 4), nsmall = 4, scientific = FALSE)
+
+  # Percentile p-value #
+  if (quantile(abX,probs=0.5)>0) {
+    PCISDT[4,8] <- format(round(2*(sum(abX<0)/5000000), digits = 4), nsmall = 4, scientific = FALSE)
+  } else {
+    PCISDT[4,8] <- format(round(2*(sum(abX>0)/5000000), digits = 4), nsmall = 4, scientific = FALSE)
+  }
+
+  ## Bias-Corrected Confidence Intervals ##
+  BCCISDT[4,1] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.005))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[4,2] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.025))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[4,3] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.050))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[4,4] <- format(round(estX, digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[4,5] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.950))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[4,6] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.975))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[4,7] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.995))), digits = 4), nsmall = 4, scientific = FALSE)
+  # Bias-Corrected Probability
+  if ((estX>0 & min(abX)>0) | (estX<0 & max(abX)<0)) {
+    BCCISDT[4,8] = 0
+  } else if (qnorm(sum(abX>0)/5000000)+2*zX<0) { 
+    BCCISDT[4,8] = format(round(2*pnorm((qnorm(sum(abX>0)/5000000)+2*zX)), digits = 4), nsmall = 4, scientific = FALSE)
+  } else {
+    BCCISDT[4,8] = format(round(2*pnorm(-1*(qnorm(sum(abX>0)/5000000)+2*zX)), digits = 4), nsmall = 4, scientific = FALSE)
+  }
+
+
+## Slope Difference Test 5 "HiZ/HiW - LoZ/LoW" ##
+  estX <- (a1+z1*stdZ+w1*stdW+zw1*stdZ*stdW)*(a2+z2*stdZ+w2*stdW+zw2*stdZ*stdW)*(a3+z3*stdZ+w3*stdW+zw3*stdZ*stdW)*(a4+z4*stdZ+w4*stdW+zw4*stdZ*stdW) -
+          (a1-z1*stdZ-w1*stdW+zw1*stdZ*stdW)*(a2-z2*stdZ-w2*stdW+zw2*stdZ*stdW)*(a3-z3*stdZ-w3*stdW+zw3*stdZ*stdW)*(a4-z4*stdZ-w4*stdW+zw4*stdZ*stdW)
+  abX <- (Sa1+Sz1*SstdZ+Sw1*SstdW+Szw1*SstdZ*SstdW)*(Sa2+Sz2*SstdZ+Sw2*SstdW+Szw2*SstdZ*SstdW)*(Sa3+Sz3*SstdZ+Sw3*SstdW+Szw3*SstdZ*SstdW)*(Sa4+Sz4*SstdZ+Sw4*SstdW+Szw4*SstdZ*SstdW) -
+         (Sa1-Sz1*SstdZ-Sw1*SstdW+Szw1*SstdZ*SstdW)*(Sa2-Sz2*SstdZ-Sw2*SstdW+Szw2*SstdZ*SstdW)*(Sa3-Sz3*SstdZ-Sw3*SstdW+Szw3*SstdZ*SstdW)*(Sa4-Sz4*SstdZ-Sw4*SstdW+Szw4*SstdZ*SstdW)
+  zX = qnorm(sum(abX<estX)/5000000)  # Bias-Corrected Factor
+
+  ## Percentile Confidence Intervals ##
+  PCISDT[5,1] <- format(round(quantile(abX,c(0.005)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[5,2] <- format(round(quantile(abX,c(0.025)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[5,3] <- format(round(quantile(abX,c(0.05)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[5,4] <- format(round(estX, digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[5,5] <- format(round(quantile(abX,c(0.95)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[5,6] <- format(round(quantile(abX,c(0.975)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[5,7] <- format(round(quantile(abX,c(0.995)), digits = 4), nsmall = 4, scientific = FALSE)
+
+  # Percentile p-value #
+  if (quantile(abX,probs=0.5)>0) {
+    PCISDT[5,8] <- format(round(2*(sum(abX<0)/5000000), digits = 4), nsmall = 4, scientific = FALSE)
+  } else {
+    PCISDT[5,8] <- format(round(2*(sum(abX>0)/5000000), digits = 4), nsmall = 4, scientific = FALSE)
+  }
+
+  ## Bias-Corrected Confidence Intervals ##
+  BCCISDT[5,1] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.005))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[5,2] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.025))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[5,3] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.050))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[5,4] <- format(round(estX, digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[5,5] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.950))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[5,6] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.975))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[5,7] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.995))), digits = 4), nsmall = 4, scientific = FALSE)
+  # Bias-Corrected Probability
+  if ((estX>0 & min(abX)>0) | (estX<0 & max(abX)<0)) {
+    BCCISDT[5,8] = 0
+  } else if (qnorm(sum(abX>0)/5000000)+2*zX<0) { 
+    BCCISDT[5,8] = format(round(2*pnorm((qnorm(sum(abX>0)/5000000)+2*zX)), digits = 4), nsmall = 4, scientific = FALSE)
+  } else {
+    BCCISDT[5,8] = format(round(2*pnorm(-1*(qnorm(sum(abX>0)/5000000)+2*zX)), digits = 4), nsmall = 4, scientific = FALSE)
+  }
+
+## Hi/Hi ##
+##    estX <- (a1+z1*stdZ+w1*stdW+zw1*stdZ*stdW)*(a2+z2*stdZ+w2*stdW+zw2*stdZ*stdW)*(a3+z3*stdZ+w3*stdW+zw3*stdZ*stdW)*(a4+z4*stdZ+w4*stdW+zw4*stdZ*stdW)
+##    abX <- (Sa1+Sz1*SstdZ+Sw1*SstdW+Szw1*SstdZ*SstdW)*(Sa2+Sz2*SstdZ+Sw2*SstdW+Szw2*SstdZ*SstdW)*(Sa3+Sz3*SstdZ+Sw3*SstdW+Szw3*SstdZ*SstdW)*(Sa4+Sz4*SstdZ+Sw4*SstdW+Szw4*SstdZ*SstdW)
+
+## Hi/Lo ##
+##    estX <- (a1+z1*stdZ-w1*stdW-zw1*stdZ*stdW)*(a2+z2*stdZ-w2*stdW-zw2*stdZ*stdW)*(a3+z3*stdZ-w3*stdW-zw3*stdZ*stdW)*(a4+z4*stdZ-w4*stdW-zw4*stdZ*stdW)
+##    abX <- (Sa1+Sz1*SstdZ-Sw1*SstdW-Szw1*SstdZ*SstdW)*(Sa2+Sz2*SstdZ-Sw2*SstdW-Szw2*SstdZ*SstdW)*(Sa3+Sz3*SstdZ-Sw3*SstdW-Szw3*SstdZ*SstdW)*(Sa4+Sz4*SstdZ-Sw4*SstdW-Szw4*SstdZ*SstdW)
+
+## Lo/Hi ##
+##    estX <- (a1-z1*stdZ+w1*stdW-zw1*stdZ*stdW)*(a2-z2*stdZ+w2*stdW-zw2*stdZ*stdW)*(a3-z3*stdZ+w3*stdW-zw3*stdZ*stdW)*(a4-z4*stdZ+w4*stdW-zw4*stdZ*stdW)
+##    abX <- (Sa1-Sz1*SstdZ+Sw1*SstdW-Szw1*SstdZ*SstdW)*(Sa2-Sz2*SstdZ+Sw2*SstdW-Szw2*SstdZ*SstdW)*(Sa3-Sz3*SstdZ+Sw3*SstdW-Szw3*SstdZ*SstdW)*(Sa4-Sz4*SstdZ+Sw4*SstdW-Szw4*SstdZ*SstdW)
+
+## Lo/Lo ##
+##    estX <- (a1-z1*stdZ-w1*stdW+zw1*stdZ*stdW)*(a2-z2*stdZ-w2*stdW+zw2*stdZ*stdW)*(a3-z3*stdZ-w3*stdW+zw3*stdZ*stdW)*(a4-z4*stdZ-w4*stdW+zw4*stdZ*stdW)
+##    abX <- (Sa1-Sz1*SstdZ-Sw1*SstdW+Szw1*SstdZ*SstdW)*(Sa2-Sz2*SstdZ-Sw2*SstdW+Szw2*SstdZ*SstdW)*(Sa3-Sz3*SstdZ-Sw3*SstdW+Szw3*SstdZ*SstdW)*(Sa4-Sz4*SstdZ-Sw4*SstdW+Szw4*SstdZ*SstdW)
+
+
+## Slope Difference Test 6 "HiZ/LoW - LoZ/HiW" ##
+  estX <- (a1+z1*stdZ-w1*stdW-zw1*stdZ*stdW)*(a2+z2*stdZ-w2*stdW-zw2*stdZ*stdW)*(a3+z3*stdZ-w3*stdW-zw3*stdZ*stdW)*(a4+z4*stdZ-w4*stdW-zw4*stdZ*stdW) -
+          (a1-z1*stdZ+w1*stdW-zw1*stdZ*stdW)*(a2-z2*stdZ+w2*stdW-zw2*stdZ*stdW)*(a3-z3*stdZ+w3*stdW-zw3*stdZ*stdW)*(a4-z4*stdZ+w4*stdW-zw4*stdZ*stdW)
+  abX <- (Sa1+Sz1*SstdZ-Sw1*SstdW-Szw1*SstdZ*SstdW)*(Sa2+Sz2*SstdZ-Sw2*SstdW-Szw2*SstdZ*SstdW)*(Sa3+Sz3*SstdZ-Sw3*SstdW-Szw3*SstdZ*SstdW)*(Sa4+Sz4*SstdZ-Sw4*SstdW-Szw4*SstdZ*SstdW) -
+         (Sa1-Sz1*SstdZ+Sw1*SstdW-Szw1*SstdZ*SstdW)*(Sa2-Sz2*SstdZ+Sw2*SstdW-Szw2*SstdZ*SstdW)*(Sa3-Sz3*SstdZ+Sw3*SstdW-Szw3*SstdZ*SstdW)*(Sa4-Sz4*SstdZ+Sw4*SstdW-Szw4*SstdZ*SstdW)
+  zX = qnorm(sum(abX<estX)/5000000)  # Bias-Corrected Factor
+
+  ## Percentile Confidence Intervals ##
+  PCISDT[6,1] <- format(round(quantile(abX,c(0.005)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[6,2] <- format(round(quantile(abX,c(0.025)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[6,3] <- format(round(quantile(abX,c(0.05)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[6,4] <- format(round(estX, digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[6,5] <- format(round(quantile(abX,c(0.95)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[6,6] <- format(round(quantile(abX,c(0.975)), digits = 4), nsmall = 4, scientific = FALSE)
+  PCISDT[6,7] <- format(round(quantile(abX,c(0.995)), digits = 4), nsmall = 4, scientific = FALSE)
+
+  # Percentile p-value #
+  if (quantile(abX,probs=0.5)>0) {
+    PCISDT[6,8] <- format(round(2*(sum(abX<0)/5000000), digits = 4), nsmall = 4, scientific = FALSE)
+  } else {
+    PCISDT[6,8] <- format(round(2*(sum(abX>0)/5000000), digits = 4), nsmall = 4, scientific = FALSE)
+  }
+
+  ## Bias-Corrected Confidence Intervals ##
+  BCCISDT[6,1] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.005))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[6,2] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.025))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[6,3] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.050))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[6,4] <- format(round(estX, digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[6,5] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.950))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[6,6] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.975))), digits = 4), nsmall = 4, scientific = FALSE)
+  BCCISDT[6,7] <- format(round(quantile(abX,probs=pnorm(2*zX+qnorm(0.995))), digits = 4), nsmall = 4, scientific = FALSE)
+  # Bias-Corrected Probability
+  if ((estX>0 & min(abX)>0) | (estX<0 & max(abX)<0)) {
+    BCCISDT[6,8] = 0
+  } else if (qnorm(sum(abX>0)/5000000)+2*zX<0) { 
+    BCCISDT[6,8] = format(round(2*pnorm((qnorm(sum(abX>0)/5000000)+2*zX)), digits = 4), nsmall = 4, scientific = FALSE)
+  } else {
+    BCCISDT[6,8] = format(round(2*pnorm(-1*(qnorm(sum(abX>0)/5000000)+2*zX)), digits = 4), nsmall = 4, scientific = FALSE)
+  }
+
+
+cat("\n")
+cat("\n")
+cat("Percentile Confidence Intervals for Simple Slope Tests: Hi = +1SD; Lo = -1SD", rep("\n", 2))
+print(PCISDT, quote=FALSE, right=TRUE)
+cat("\n")
+
+cat("\n")
+cat("Bias-Corrected Confidence Intervals for Simple Slope Tests: Hi = +1SD; Lo = -1SD", rep("\n", 2))
+print(BCCISDT, quote=FALSE, right=TRUE)
+cat("\n")
+
+}
+#####
+
+## End function mccimm ##
+}

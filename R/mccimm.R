@@ -15,10 +15,11 @@
 #library(MplusAutomation)
 
 
-## ====== Function "mccimm_modsem" Monte Carlo Simulation for Confidence Intervals of Moderated Mediation (modsem) ====== ##
-#' Monte Carlo Simulation for Confidence Intervals of Moderated Mediation (modsem)
+## ====== Function "mccimm_modsem_da" Monte Carlo Simulation for Confidence Intervals of Moderated Mediation (modsem_da) ====== ##
+#' Monte Carlo Simulation for Confidence Intervals of Moderated Mediation (modsem_da)
 #'
-#' Generate confidence intervals of moderated-mediating effects from modsem results using Monte Carlo simulation.
+#' Generate confidence intervals of moderated-mediating effects from modsem data analytic approaches (lms or qml) results using Monte Carlo simulation.
+#' For results from modsem product indicator approaches results, first convery modsem object into lavaan using extract_lavaan(object) function, then use mccimm_lavaan for the Monte Carlo simulation. For example, lave_est <- extract_lavaan(object)
 #'
 #' \if{html}{
 #' \figure{Figure.png}{options: width="75\%" alt="Description of my figure"}
@@ -56,7 +57,7 @@
 #'
 #' # modsem object is "est_lms" & output mccimm object is mcObject
 #'
-#' mcObject <- mccimm_modsem(est_lms, a1="a1", a2="a2", a3="a3a", a1="z1", Z="Autonomy")
+#' mcObject <- mccimm_modsem_da(est_lms, a1="a1", a2="a2", a3="a3a", a1="z1", Z="Autonomy")
 #'
 #'
 #' # Change 2-Way Figure Title and/or Axis Labels Afterwards
@@ -73,7 +74,7 @@
 #' ggplot2::ggsave("New Standardized Interaction Figure.png", width = 22.86, height = 16.51, units = "cm")
 #'
 
-  mccimm_modsem <- function(object, Z="NA", W="NA",
+  mccimm_modsem_da <- function(object, Z="NA", W="NA",
                    a1="NA", z1="NA", w1="NA", zw1="NA",
                    a2="NA", z2="NA", w2="NA", zw2="NA",
                    a3="NA", z3="NA", w3="NA", zw3="NA",
@@ -147,7 +148,7 @@
 
   return(return_mccimm)
 
-}  ## end (Function "mccimm_modsem") ##
+}  ## end (Function "mccimm_modsem_da") ##
 
 
 
@@ -1974,9 +1975,9 @@ mccimm <- function(estcoeff, stdyx.estcoeff, Tech3,
 
 
 ## ===== Simulation of Defined Function (modsem) ===== ##
-#' Monte Carlo Simulation for Confidence Intervals of Defined Function (modsem)
+#' Monte Carlo Simulation for Confidence Intervals of Defined Function (modsem_da)
 #'
-#' Generate confidence intervals of defined function from modsem results using Monte Carlo simulation.
+#' Generate confidence intervals of defined function from modsem da approaches (lms or qml) results using Monte Carlo simulation.
 #'
 #' @param object modsem object (output from modsem).
 #' @param Sfunction function of estimated parameters from modsem object.

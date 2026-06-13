@@ -2,7 +2,7 @@
 % Please edit documentation in R/mccimm.R
 \name{mccimm_modsem_fun}
 \alias{mccimm_modsem_fun}
-\title{Monte Carlo Simulation for Confidence Intervals of Defined Function (modsem)}
+\title{Monte Carlo Simulation for Confidence Intervals of Defined Function (modsem_da)}
 \usage{
 mccimm_modsem_fun(object, Sfunction = "NULL", R = 5)
 }
@@ -17,7 +17,7 @@ mccimm_modsem_fun(object, Sfunction = "NULL", R = 5)
 mccimm confidence intervals.
 }
 \description{
-Generate confidence intervals of defined function from modsem results using Monte Carlo simulation.
+Generate confidence intervals of defined function from modsem da approaches (lms or qml) results using Monte Carlo simulation.
 }
 \examples{
 

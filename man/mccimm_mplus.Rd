@@ -2,7 +2,7 @@
 % Please edit documentation in R/mccimm.R
 \name{mccimm_mplus}
 \alias{mccimm_mplus}
-\title{Monte Carlo Simulation for Confidence Intervals of Moderated Mediation (mplus)}
+\title{Monte Carlo Simulation for Confidence Intervals of Moderated Mediation (Mplus)}
 \usage{
 mccimm_mplus(
   mplus_output_file = "mplus_output.out",
@@ -81,7 +81,7 @@ mccimm_mplus(
 mccimm output for plotting Johnson-Neyman Figure.
 }
 \description{
-Generate confidence intervals of moderated-mediating effects from modsem results using Monte Carlo simulation.
+Generate confidence intervals of moderated-mediating effects from Mplus results using Monte Carlo simulation.
 Location of estimated parameters can be found in mccimm::TECH1().
 }
 \details{

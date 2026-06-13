@@ -19,7 +19,7 @@
 #' Monte Carlo Simulation for Confidence Intervals of Moderated Mediation (modsem_da)
 #'
 #' Generate confidence intervals of moderated-mediating effects from modsem data analytic approaches (lms or qml) results using Monte Carlo simulation.
-#' For results from modsem product indicator approaches results, first convery modsem object into lavaan using extract_lavaan(object) function, then use mccimm_lavaan for the Monte Carlo simulation. For example, lave_est <- extract_lavaan(object)
+#' For results from modsem product indicator approaches results, first convert modsem object into lavaan using extract_lavaan(object) function, then use mccimm_lavaan for the Monte Carlo simulation. For example, lave_est <- extract_lavaan(object)
 #'
 #' \if{html}{
 #' \figure{Figure.png}{options: width="75\%" alt="Description of my figure"}

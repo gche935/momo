@@ -225,16 +225,21 @@
   dp <- c(a1, a2, a3, a4, z1, z2, z3, z4, w1, w2, w3, w4, zw1, zw2, zw3, zw4, varZ, varW)
   dp <- dp[dp != "NA"]
 
+  IVvar <- lavNames(object, "eqs.x")
+  varIV <- paste0(IVvar, "~~", IVvar)
+
+  PAR <- dd[which(dd[,"label"] != ""),"label"]
+  PAR <- c(PAR, varIV)
 
   temp <- lavaan::coef(object)
-  estcoeff <- temp[dp]
+  estcoeff <- temp[PAR]
   Temp3 <- lavaan::vcov(object)
-  Tech3 <- Temp3[dp, dp]
+  Tech3 <- Temp3[PAR, PAR]
 
   dd <- lavaan::parameterEstimates(object, standardized=TRUE, remove.nonfree=TRUE, remove.def=TRUE)
   stdyx.temp <- dd[, "std.all"]
   names(stdyx.temp) <- names(temp)
-  stdyx.estcoeff <- stdyx.temp[dp]
+  stdyx.estcoeff <- stdyx.temp[PAR]
 
   return_mccimm <- mccimm(estcoeff, stdyx.estcoeff, Tech3,
                         Z, W,
@@ -516,6 +521,16 @@ mccimm <- function(estcoeff, stdyx.estcoeff, Tech3,
 
   ## -- Monte Carlo Simulation of R*1e6 samples, default: R = 5 -- ##
   mcmc <- MASS::mvrnorm(n=R*1e6, mu=estcoeff, Sigma=Tech3, tol = 1e-6)
+
+  varZ <- "NA"
+  varW <- "NA"
+  if (Z != "NA") varZ <- paste0(Z, "~~", Z)
+  if (W != "NA") varW <- paste0(W, "~~", W)
+  dp <- c(a1, a2, a3, a4, z1, z2, z3, z4, w1, w2, w3, w4, zw1, zw2, zw3, zw4, varZ, varW)
+  dp <- dp[dp != "NA"]
+  estcoeff <- estcoeff[dp]
+  stdyx.estcoeff <- stdyx.estcoeff[dp]
+  mcmc <- mcmc[, dp]
 
   # -- Retain simulated samples with variance larger than or equal to 0 -- #
   if (NoMod == 1) {
@@ -819,7 +834,7 @@ mccimm <- function(estcoeff, stdyx.estcoeff, Tech3,
     } else {
       BCCI.SST[3,8] = format(round(2*pnorm(-1*(qnorm(sum(abSST>0)/b.no)+2*zSST)), digits = 4), nsmall = 4, scientific = FALSE)
     }
-    
+
     cat(rep("\n", 2))
     cat("## --- Simple Slopes Tests --- ##", rep("\n",2))
     cat("Percentile Confidence Intervals for Simple Slopes Tests", rep("\n", 2))
@@ -1040,7 +1055,7 @@ mccimm <- function(estcoeff, stdyx.estcoeff, Tech3,
     } else {
       BCCI.SST[3,8] = format(round(2*pnorm(-1*(qnorm(sum(abSST>0)/b.no)+2*zSST)), digits = 4), nsmall = 4, scientific = FALSE)
     }
-    
+
     cat(rep("\n", 2))
     cat("## --- Simple Slopes Tests --- ##", rep("\n",2))
     cat("Percentile Confidence Intervals for Simple Slopes Tests", rep("\n", 2))
@@ -1215,7 +1230,7 @@ mccimm <- function(estcoeff, stdyx.estcoeff, Tech3,
     } else {
       BCCI.SST[3,8] = format(round(2*pnorm(-1*(qnorm(sum(abSST>0)/b.no)+2*zSST)), digits = 4), nsmall = 4, scientific = FALSE)
     }
-    
+
     cat(rep("\n", 2))
     cat("## --- Simple Slopes Tests --- ##", rep("\n",2))
     cat("Percentile Confidence Intervals for Simple Slopes Tests", rep("\n", 2))
@@ -1390,7 +1405,7 @@ mccimm <- function(estcoeff, stdyx.estcoeff, Tech3,
     } else {
       BCCI.SST[3,8] = format(round(2*pnorm(-1*(qnorm(sum(abSST>0)/b.no)+2*zSST)), digits = 4), nsmall = 4, scientific = FALSE)
     }
-    
+
     cat(rep("\n", 2))
     cat("## --- Simple Slopes Tests --- ##", rep("\n",2))
     cat("Percentile Confidence Intervals for Simple Slopes Tests", rep("\n", 2))
@@ -2114,13 +2129,22 @@ mccimm_lavaan_fun <- function(object, Sfunction="NULL", R=5) {
   }
 
   ## Extract defined parameters and vcov ##
+  IVvar <- lavNames(object, "eqs.x")
+  varIV <- paste0(IVvar, "~~", IVvar)
+
+  PAR <- dd[which(dd[,"label"] != ""),"label"]
+  PAR <- c(PAR, varIV)
+
   temp <- lavaan::coef(object)
-  estcoeff <- temp[dp]
+  estcoeff <- temp[PAR]
   Temp3 <- lavaan::vcov(object)
-  Tech3 <- Temp3[dp, dp]
+  Tech3 <- Temp3[PAR, PAR]
 
   ## -- Monte Carlo Simulation of R*1e6 samples, default: R = 5 -- ##
   mcmc <- MASS::mvrnorm(n=R*1e6, mu=estcoeff, Sigma=Tech3, tol = 1e-6)
+
+  estcoeff <- estcoeff[dp]
+  mcmc <- mcmc[, dp]
 
   b.no <- nrow(mcmc)
   R.no <- format(R*1e6, scientific = FALSE)
@@ -2278,7 +2302,7 @@ mccimm_mplus_fun <- function(mplus_output_file = "mplus_output.out",
   non_na_list <<- dp_list[which(!is.na(dp_no))]
   dp <- dp[dp != "NA"]
   dp <- as.numeric(dp)
- 
+
   estcoeff <- temp[dp]
   names(estcoeff) <- non_na_list
 

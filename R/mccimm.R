@@ -114,9 +114,13 @@
   dp <- c(a1, a2, a3, a4, z1, z2, z3, z4, w1, w2, w3, w4, zw1, zw2, zw3, zw4, varZ, varW)
   dp <- dp[dp != "NA"]
 
-  XISETAS <- paste(unlist(object$elementsInProdNames), collapse = " ")
-  split_elements <- unlist(strsplit(XISETAS, split = " "))
-  XISETAS <- unique(split_elements)
+  if (is(object) == "modsem_pi") {
+    XISETAS <- paste(unlist(object$elementsInProdNames), collapse = " ")
+    split_elements <- unlist(strsplit(XISETAS, split = " "))
+    XISETAS <- unique(split_elements)
+  } else {
+    XISETAS <- c(object$model$models[[1]]$info$xis, object$model$models[[1]]$info$etas)
+  } # end if modsem_pi
   varIV <- paste0(XISETAS, "~~", XISETAS)
 
   dd <- modsem::parameter_estimates(object)
@@ -2002,9 +2006,13 @@ mccimm_modsem_fun <- function(object, Sfunction="NULL", R=5) {
 
   ## Extract defined parameters and vcov ##
 
-  XISETAS <- paste(unlist(object$elementsInProdNames), collapse = " ")
-  split_elements <- unlist(strsplit(XISETAS, split = " "))
-  XISETAS <- unique(split_elements)
+  if (is(object) == "modsem_pi") {
+    XISETAS <- paste(unlist(object$elementsInProdNames), collapse = " ")
+    split_elements <- unlist(strsplit(XISETAS, split = " "))
+    XISETAS <- unique(split_elements)
+  } else {
+    XISETAS <- c(object$model$models[[1]]$info$xis, object$model$models[[1]]$info$etas)
+  } # end if modsem_pi
   varIV <- paste0(XISETAS, "~~", XISETAS)
 
   dd <- modsem::parameter_estimates(object)

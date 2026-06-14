@@ -242,7 +242,9 @@
 
   dd <- lavaan::parameterEstimates(object, standardized=TRUE, remove.nonfree=TRUE, remove.def=TRUE)
   PAR <- dd[which(dd[,"label"] != ""),"label"]
-  PAR <- c(PAR, varIV)
+  if (Z != "NA" | W != "NA") {
+    PAR <- c(PAR, varIV)
+  } # end if Z
 
   temp <- lavaan::coef(object)
   estcoeff <- temp[PAR]
@@ -2161,7 +2163,6 @@ mccimm_lavaan_fun <- function(object, Sfunction="NULL", R=5) {
 
   dd <- lavaan::parameterEstimates(object, standardized=TRUE, remove.nonfree=TRUE, remove.def=TRUE)
   PAR <- dd[which(dd[,"label"] != ""),"label"]
-  PAR <- c(PAR, varIV)
 
   temp <- lavaan::coef(object)
   estcoeff <- temp[PAR]

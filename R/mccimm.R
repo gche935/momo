@@ -1,21 +1,21 @@
-###############################################################################################
-# Author: Prof. Gordon Cheung (University of Auckland)                                        #
-# email: gordon.cheung@auckland.ac.nz                                                         #
-# Purpose: Monte Carlo simulation of conditional indirect effects from modsem & Mplus outputs #
-# Model: Allows 3-way interaction                                                             #
-# Allows simulated function (Sfunction = "    "                                               #
-# Version: Beta 1.3.1                                                                         #
-# WARNING: This is a beta version. Please report all bugs to the author                       #
-###############################################################################################
+########################################################################################################
+# Author: Prof. Gordon Cheung (University of Auckland)                                                 #
+# email: gordon.cheung@auckland.ac.nz                                                                  #
+# Purpose: Monte Carlo simulation for moderated mediating  effects from modsem, lavaan & Mplus outputs #
+# Model: Allows 3-way interaction                                                                      #
+# Allows simulated function (Sfunction = "    "                                                        #
+# Version: Beta 0.1.0                                                                                  #
+# WARNING: This is a beta version. Please report all bugs to the author                                #
+########################################################################################################
 
-## == Required packages (load when loading mccimm) == ##
+## == Required packages (load when loading momo) == ##
 #library(MASS)
 #library(ggplot2)
 #library(tidyr)
 #library(MplusAutomation)
 
 
-## ====== Function "mccimm_modsem" Monte Carlo Simulation for Confidence Intervals of Moderated Mediation (modsem) ====== ##
+## ====== Function "momo_modsem" Monte Carlo Simulation for Confidence Intervals of Moderated Mediation (modsem) ====== ##
 #' Monte Carlo Simulation for Confidence Intervals of Moderated Mediation (modsem)
 #'
 #' Generate confidence intervals of moderated-mediating effects from modsem results using Monte Carlo simulation.
@@ -48,15 +48,15 @@
 #' @param zw4 parameter name of zw4 path (3-way interaction effect).
 #' @param R number of Monte Carlo simulation samples (in millions). For example, R=5 (default) generates 5,000,000 simulated samples.
 #'
-#' @return mccimm output for plotting Johnson-Neyman Figure.
+#' @return momo output for plotting Johnson-Neyman Figure.
 #' @export
 #' @examples
 #'
 #' ## -- Example -- ##
 #'
-#' # modsem object is "est_lms" & output mccimm object is mcObject
+#' # modsem object is "est_lms" & output momo object is mcObject
 #'
-#' mcObject <- mccimm_modsem(est_lms, a1="a1", a2="a2", a3="a3a", a1="z1", Z="Autonomy")
+#' mcObject <- momo_modsem(est_lms, a1="a1", a2="a2", a3="a3a", a1="z1", Z="Autonomy")
 #'
 #'
 #' # Change 2-Way Figure Title and/or Axis Labels Afterwards
@@ -73,7 +73,7 @@
 #' ggplot2::ggsave("New Standardized Interaction Figure.png", width = 22.86, height = 16.51, units = "cm")
 #'
 
-  mccimm_modsem <- function(object, Z="NA", W="NA",
+  momo_modsem <- function(object, Z="NA", W="NA",
                    a1="NA", z1="NA", w1="NA", zw1="NA",
                    a2="NA", z2="NA", w2="NA", zw2="NA",
                    a3="NA", z3="NA", w3="NA", zw3="NA",
@@ -143,7 +143,7 @@
   }
   stdyx.estcoeff <- stdyx.temp[PAR]
 
-  return_mccimm <- mccimm(estcoeff, stdyx.estcoeff, Tech3,
+  return_momo <- momo(estcoeff, stdyx.estcoeff, Tech3,
                         Z, W,
                         varZ, varW,
                         a1, z1, w1, zw1,
@@ -152,14 +152,14 @@
                         a4, z4, w4, zw4,
                         R=5)
 
-  return(return_mccimm)
+  return(return_momo)
 
-}  ## end (Function "mccimm_modsem") ##
-
-
+}  ## end (Function "momo_modsem") ##
 
 
-## ====== Function "mccimm_lavaan" Monte Carlo Simulation for Confidence Intervals of Moderated Mediation (lavaan) ====== ##
+
+
+## ====== Function "momo_lavaan" Monte Carlo Simulation for Confidence Intervals of Moderated Mediation (lavaan) ====== ##
 #' Monte Carlo Simulation for Confidence Intervals of Moderated Mediation (lavaan)
 #'
 #' Generate confidence intervals of moderated-mediating effects from lavaan results using Monte Carlo simulation.
@@ -192,15 +192,15 @@
 #' @param zw4 parameter name of zw4 path (3-way interaction effect).
 #' @param R number of Monte Carlo simulation samples (in millions). For example, R=5 (default) generates 5,000,000 simulated samples.
 #'
-#' @return mccimm output for plotting Johnson-Neyman Figure.
+#' @return momo output for plotting Johnson-Neyman Figure.
 #' @export
 #' @examples
 #'
 #' ## -- Example -- ##
 #'
-#' # lavaan object is "est_lms" & output mccimm object is mcObject
+#' # lavaan object is "est_lms" & output momo object is mcObject
 #'
-#' mcObject <- mccimm_lavaan(est_lms, a1="a1", a2="a2", a3="a3a", a1="z1", Z="Autonomy")
+#' mcObject <- momo_lavaan(est_lms, a1="a1", a2="a2", a3="a3a", a1="z1", Z="Autonomy")
 #'
 #'
 #' # Change 2-Way Figure Title and/or Axis Labels Afterwards
@@ -217,7 +217,7 @@
 #' ggplot2::ggsave("New Standardized Interaction Figure.png", width = 22.86, height = 16.51, units = "cm")
 #'
 
-  mccimm_lavaan <- function(object, Z="NA", W="NA",
+  momo_lavaan <- function(object, Z="NA", W="NA",
                    a1="NA", z1="NA", w1="NA", zw1="NA",
                    a2="NA", z2="NA", w2="NA", zw2="NA",
                    a3="NA", z3="NA", w3="NA", zw3="NA",
@@ -255,7 +255,7 @@
   names(stdyx.temp) <- names(temp)
   stdyx.estcoeff <- stdyx.temp[PAR]
 
-  return_mccimm <- mccimm(estcoeff, stdyx.estcoeff, Tech3,
+  return_momo <- momo(estcoeff, stdyx.estcoeff, Tech3,
                         Z, W,
                         varZ, varW,
                         a1, z1, w1, zw1,
@@ -264,19 +264,19 @@
                         a4, z4, w4, zw4,
                         R=5)
 
-  return(return_mccimm)
+  return(return_momo)
 
-}  ## end (Function "mccimm_lavaan") ##
-
-
+}  ## end (Function "momo_lavaan") ##
 
 
 
-## ====== Function "mccimm_mplus" Monte Carlo Confidence Intervals for Moderated Mediation (mplus) ====== ##
+
+
+## ====== Function "momo_mplus" Monte Carlo Confidence Intervals for Moderated Mediation (mplus) ====== ##
 #' Monte Carlo Simulation for Confidence Intervals of Moderated Mediation (Mplus)
 #'
 #' Generate confidence intervals of moderated-mediating effects from Mplus results using Monte Carlo simulation.
-#' Location of estimated parameters can be found in mccimm::TECH1().
+#' Location of estimated parameters can be found in momo::TECH1().
 #'
 #' \if{html}{
 #' \figure{Figure.png}{options: width="75\%" alt="Description of my figure"}
@@ -309,16 +309,16 @@
 #' @param zw4 location of parameter zw4 in Mplus Tech1 outputs.
 #' @param R number of Monte Carlo simulation samples (in millions). For example, R=5 (default) generates 5,000,000 simulated samples.
 #'
-#' @return mccimm output for plotting Johnson-Neyman Figure.
+#' @return momo output for plotting Johnson-Neyman Figure.
 #' @export
 #' @examples
 #'
 #' ## -- Example -- ##
 #'
 #' # mplus_output_file is "model cc4.out", results_file is "Model_CC4.txt" & moderator Z is "AUTO"
-#' # output mccimm object is mcObject
+#' # output momo object is mcObject
 #'
-#' mcObject <- mccimm_mplus("model cc4.out", "Model_CC4.txt", Z = "AUTO", varZ = "72",
+#' mcObject <- momo_mplus("model cc4.out", "Model_CC4.txt", Z = "AUTO", varZ = "72",
 #'             a1 = "60", a2 = "65", z1 = "62")
 #'
 #'
@@ -336,7 +336,7 @@
 #' ggplot2::ggsave("New Standardized Interaction Figure.png", width = 22.86, height = 16.51, units = "cm")
 #'
 
-mccimm_mplus <- function(mplus_output_file = "mplus_output.out",
+momo_mplus <- function(mplus_output_file = "mplus_output.out",
                    results_file = "results.txt",
                    Z="NA", W="NA",
                    varZ="NA", varW="NA",
@@ -399,7 +399,7 @@ mccimm_mplus <- function(mplus_output_file = "mplus_output.out",
   if (zw3 != "NA") zw3 <- "zw3"
   if (zw4 != "NA") zw4 <- "zw4"
 
-  return_mccimm <- mccimm(estcoeff, stdyx.estcoeff, Tech3,
+  return_momo <- momo(estcoeff, stdyx.estcoeff, Tech3,
                         Z, W,
                         varZ, varW,
                         a1, z1, w1, zw1,
@@ -408,18 +408,18 @@ mccimm_mplus <- function(mplus_output_file = "mplus_output.out",
                         a4, z4, w4, zw4,
                         R=5)
 
-  return(return_mccimm)
+  return(return_momo)
 
 
   ## ------------------------------- ##
 
-}  ## end (Function "mccimm_mplus") ##
+}  ## end (Function "momo_mplus") ##
 
 
 
-## ====== Sub-Function "mccimm" Monte Carlo Confidence Intervals for Moderated Mediation ====== ##
+## ====== Sub-Function "momo" Monte Carlo Confidence Intervals for Moderated Mediation ====== ##
 
-mccimm <- function(estcoeff, stdyx.estcoeff, Tech3,
+momo <- function(estcoeff, stdyx.estcoeff, Tech3,
                    Z="NA", W="NA",
                    varZ="NA", varW="NA",
                    a1="NA", z1="NA", w1="NA", zw1="NA",
@@ -1978,7 +1978,7 @@ mccimm <- function(estcoeff, stdyx.estcoeff, Tech3,
               Sw1=U7XSw1, Sw2=U7XSw2, Sw3=U7XSw3, Sw4=U7XSw4,
               b.no = b.no, NoModz = NoModz, NoModw = NoModw, Z=Z))
 
-}  ## ===== End (function mccimm) ===== ##
+}  ## ===== End (function momo) ===== ##
 
 
 
@@ -1991,7 +1991,7 @@ mccimm <- function(estcoeff, stdyx.estcoeff, Tech3,
 #' @param Sfunction function of estimated parameters from modsem object.
 #' @param R number of Monte Carlo simulation samples (in millions). For example, R=5 (default) generates 5,000,000 simulated samples.
 #'
-#' @return mccimm confidence intervals.
+#' @return momo confidence intervals.
 #' @export
 #' @examples
 #'
@@ -1999,10 +1999,10 @@ mccimm <- function(estcoeff, stdyx.estcoeff, Tech3,
 #'
 #' # modsem object is "est_lms"
 #'
-#' mccimm_modsem_fun(est_lms, Sfunction = "a1*a2")
+#' momo_modsem_fun(est_lms, Sfunction = "a1*a2")
 #'
 
-mccimm_modsem_fun <- function(object, Sfunction="NULL", R=5) {
+momo_modsem_fun <- function(object, Sfunction="NULL", R=5) {
 
   dp <- all.vars(parse(text = Sfunction))
   var_label <- parameter_estimates(object)$label
@@ -2122,7 +2122,7 @@ mccimm_modsem_fun <- function(object, Sfunction="NULL", R=5) {
   print(BCCI, quote=FALSE, right=TRUE)
   cat("\n")
 
-}  ## ===== End (function mccimm_modsem_fun) ===== ##
+}  ## ===== End (function momo_modsem_fun) ===== ##
 
 
 
@@ -2137,7 +2137,7 @@ mccimm_modsem_fun <- function(object, Sfunction="NULL", R=5) {
 #' @param Sfunction function of estimated parameters from lavaan object.
 #' @param R number of Monte Carlo simulation samples (in millions). For example, R=5 (default) generates 5,000,000 simulated samples.
 #'
-#' @return mccimm confidence intervals.
+#' @return momo confidence intervals.
 #' @export
 #' @examples
 #'
@@ -2145,10 +2145,10 @@ mccimm_modsem_fun <- function(object, Sfunction="NULL", R=5) {
 #'
 #' # lavaan object is "est_lms"
 #'
-#' mccimm_lavaan_fun(est_lms, Sfunction = "a1*a2")
+#' momo_lavaan_fun(est_lms, Sfunction = "a1*a2")
 #'
 
-mccimm_lavaan_fun <- function(object, Sfunction="NULL", R=5) {
+momo_lavaan_fun <- function(object, Sfunction="NULL", R=5) {
 
   dp <- all.vars(parse(text = Sfunction))
   var_label <- lavaan::parameterEstimates(object)$label
@@ -2259,17 +2259,17 @@ mccimm_lavaan_fun <- function(object, Sfunction="NULL", R=5) {
   print(BCCI, quote=FALSE, right=TRUE)
   cat("\n")
 
-}  ## ===== End (function mccimm_lavaan_fun) ===== ##
+}  ## ===== End (function momo_lavaan_fun) ===== ##
 
 
 
 
 
-## ====== Function "mccimm_mplus_fun" Monte Carlo Confidence Intervals for Defined Function (mplus) ====== ##
+## ====== Function "momo_mplus_fun" Monte Carlo Confidence Intervals for Defined Function (mplus) ====== ##
 #' Monte Carlo Simulation for Confidence Intervals of Defined Function (mplus)
 #'
 #' Generate confidence intervals of a defined function from Mplus results using Monte Carlo simulation.
-#' Location of estimated parameters can be found in mccimm::TECH1().
+#' Location of estimated parameters can be found in momo::TECH1().
 #'
 #' @param mplus_output_file Mplus output (.out) file (output from Mplus).
 #' @param results_file Mplus a text file (.txt) that saves the Mplus results (RESULTS IS "filename.txt" in Mplus SAVEDATA:).
@@ -2299,13 +2299,13 @@ mccimm_lavaan_fun <- function(object, Sfunction="NULL", R=5) {
 #' ## -- Example -- ##
 #'
 #' # mplus_output_file is "model cc4.out", results_file is "Model_CC4.txt" & moderator Z is "AUTO"
-#' # output mccimm object is mcObject
+#' # output momo object is mcObject
 #'
-#' mcObject <- mccimm_mplus_fun("model cc4.out", "Model_CC4.txt",
+#' mcObject <- momo_mplus_fun("model cc4.out", "Model_CC4.txt",
 #'             a1 = "60", a2 = "65", Sfunction="a1*a2")
 #'
 
-mccimm_mplus_fun <- function(mplus_output_file = "mplus_output.out",
+momo_mplus_fun <- function(mplus_output_file = "mplus_output.out",
                              results_file = "results.txt",
                              a1="NA", a2="NA", a3="NA", a4="NA",
                              z1="NA", z2="NA", z3="NA", z4="NA",
@@ -2443,18 +2443,18 @@ mccimm_mplus_fun <- function(mplus_output_file = "mplus_output.out",
   print(BCCI, quote=FALSE, right=TRUE)
   cat("\n")
 
-}  ## ===== End (function mccimm_mplus_fun) ===== ##
+}  ## ===== End (function momo_mplus_fun) ===== ##
 
 
 
 
 
 ## ===== FUNCTION JN_plot to plot Johnson-Neyman Figure ===== ##
-#' Generate Johnson-Neyman Figure from mccimm object
+#' Generate Johnson-Neyman Figure from momo object
 #'
-#' Generate Johnson-Neyman Figure from mccimm object
+#' Generate Johnson-Neyman Figure from momo object
 #'
-#' @param mccimmObject mccimm object (output from mccimm_modsem or mccimm_mplus).
+#' @param momoObject momo object (output from momo_modsem or momo_mplus).
 #' @param min_z minimum values of moderator Z on the graph.
 #' @param max_z maximum values of moderator Z on the graph.
 #' @param detail detail of the Johnson-Neyman graph. The higher the number, the smoother the lines, but it will also take longer to generate.
@@ -2469,12 +2469,12 @@ mccimm_mplus_fun <- function(mplus_output_file = "mplus_output.out",
 #'
 #' ## -- Example -- ##
 #'
-#' # modsem object is mcObject & output JN_plot object is JN_figure
+#' # momoObject is mcObject & output JN_plot object is JN_figure
 #'
 #' JN_figure <- JN_plot(mcObject)
 #'
 
-JN_plot <- function (mccimmObject, ci="bc",
+JN_plot <- function (momoObject, ci="bc",
                      min_z = -3, max_z = 3, detail = 300,
                      lower.quantile = 0.025, upper.quantile = 0.975,
                      alpha = 0.2, sd.line = 2)
@@ -2484,39 +2484,39 @@ JN_plot <- function (mccimmObject, ci="bc",
   cat("Generating Johnson-Neyman Figure ... ", rep("\n", 2))
 
 
-  ## -- Get values from mccimmObject -- ##
-  a1 <- mccimmObject$a1
-  a2 <- mccimmObject$a2
-  a3 <- mccimmObject$a3
-  a4 <- mccimmObject$a4
-  z1 <- mccimmObject$z1
-  z2 <- mccimmObject$z2
-  z3 <- mccimmObject$z3
-  z4 <- mccimmObject$z4
-  w1 <- mccimmObject$w1
-  w2 <- mccimmObject$w2
-  w3 <- mccimmObject$w3
-  w4 <- mccimmObject$w4
+  ## -- Get values from momoObject -- ##
+  a1 <- momoObject$a1
+  a2 <- momoObject$a2
+  a3 <- momoObject$a3
+  a4 <- momoObject$a4
+  z1 <- momoObject$z1
+  z2 <- momoObject$z2
+  z3 <- momoObject$z3
+  z4 <- momoObject$z4
+  w1 <- momoObject$w1
+  w2 <- momoObject$w2
+  w3 <- momoObject$w3
+  w4 <- momoObject$w4
 
-  sd_z <- mccimmObject$sd_z
+  sd_z <- momoObject$sd_z
 
-  Sa1 <- mccimmObject$Sa1
-  Sa2 <- mccimmObject$Sa2
-  Sa3 <- mccimmObject$Sa3
-  Sa4 <- mccimmObject$Sa4
-  Sz1 <- mccimmObject$Sz1
-  Sz2 <- mccimmObject$Sz2
-  Sz3 <- mccimmObject$Sz3
-  Sz4 <- mccimmObject$Sz4
-  Sw1 <- mccimmObject$Sw1
-  Sw2 <- mccimmObject$Sw2
-  Sw3 <- mccimmObject$Sw3
-  Sw4 <- mccimmObject$Sw4
+  Sa1 <- momoObject$Sa1
+  Sa2 <- momoObject$Sa2
+  Sa3 <- momoObject$Sa3
+  Sa4 <- momoObject$Sa4
+  Sz1 <- momoObject$Sz1
+  Sz2 <- momoObject$Sz2
+  Sz3 <- momoObject$Sz3
+  Sz4 <- momoObject$Sz4
+  Sw1 <- momoObject$Sw1
+  Sw2 <- momoObject$Sw2
+  Sw3 <- momoObject$Sw3
+  Sw4 <- momoObject$Sw4
 
-  b.no <- mccimmObject$b.no
-  NoModz <- mccimmObject$NoModz
-  NoModw <- mccimmObject$NoModw
-  Z <- mccimmObject$Z
+  b.no <- momoObject$b.no
+  NoModz <- momoObject$NoModz
+  NoModw <- momoObject$NoModw
+  Z <- momoObject$Z
 
 
   ## -- Calculating Parameters -- ##
@@ -2650,7 +2650,7 @@ JN_plot <- function (mccimmObject, ci="bc",
 ## ===== Function TECH1 to identify position of reference parameters for Mplus outputs ===== ##
 #' Present Mplus results with matching numbers on TECH1 outputs from Mplus
 #'
-#' Present Mplus estimated parameters with matching number on TECH1 outputs (for inputs in mccimm_mplus)
+#' Present Mplus estimated parameters with matching number on TECH1 outputs (for inputs in momo_mplus)
 #'
 #' @param mplusoutput.file Mplus output file (with TECH 1 on the OUTPUT: command in Mplus input file).
 #'

@@ -13,7 +13,7 @@ TECH1(mplusoutput.file = "example_d3.out")
 outputs on screen
 }
 \description{
-Present Mplus estimated parameters with matching number on TECH1 outputs (for inputs in mccimm_mplus)
+Present Mplus estimated parameters with matching number on TECH1 outputs (for inputs in momo_mplus)
 }
 \examples{
 

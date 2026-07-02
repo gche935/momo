@@ -2,10 +2,10 @@
 % Please edit documentation in R/mccimm.R
 \name{JN_plot}
 \alias{JN_plot}
-\title{Generate Johnson-Neyman Figure from mccimm object}
+\title{Generate Johnson-Neyman Figure from momo object}
 \usage{
 JN_plot(
-  mccimmObject,
+  momoObject,
   ci = "bc",
   min_z = -3,
   max_z = 3,
@@ -17,7 +17,7 @@ JN_plot(
 )
 }
 \arguments{
-\item{mccimmObject}{mccimm object (output from mccimm_modsem or mccimm_mplus).}
+\item{momoObject}{momo object (output from momo_modsem or momo_mplus).}
 
 \item{min_z}{minimum values of moderator Z on the graph.}
 
@@ -37,13 +37,13 @@ JN_plot(
 a figure for changing the titles.
 }
 \description{
-Generate Johnson-Neyman Figure from mccimm object
+Generate Johnson-Neyman Figure from momo object
 }
 \examples{
 
 ## -- Example -- ##
 
-# modsem object is mcObject & output JN_plot object is JN_figure
+# momoObject is mcObject & output JN_plot object is JN_figure
 
 JN_figure <- JN_plot(mcObject)
 

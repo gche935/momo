@@ -4,7 +4,7 @@
 # Purpose: Monte Carlo simulation for moderated mediating  effects from modsem, lavaan & Mplus outputs #
 # Model: Allows 3-way interaction                                                                      #
 # Allows simulated function (Sfunction = "    "                                                        #
-# Version: Beta 0.1.0                                                                                  #
+# Version: Beta 0.1.1                                                                                  #
 # WARNING: This is a beta version. Please report all bugs to the author                                #
 ########################################################################################################
 
@@ -1859,7 +1859,15 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
       BCCISDT[6,8] = format(round(2*pnorm(-1*(qnorm(sum(abX>0)/b.no)+2*zX)), digits = 4), nsmall = 4, scientific = FALSE)
     }
 
+
+    # -- Print unstandardized effects -- #
     cat("\n")
+    cat("\n")
+    cat("\n", "Unstandardized effect when Z is high (Mean + 1 S.D.) and W is high (Mean + 1 S.D.) = ", format(PCI[4.4.4], digits=4, nsmall=4))
+    cat("\n", "Unstandardized effect when Z is high (Mean + 1 S.D.) and W is low (Mean - 1 S.D.) = ", format(PCI[4,4,2], digits=4, nsmall=4))
+    cat("\n", "Unstandardized effect when Z is low (Mean - 1 S.D.) and W is high (Mean + 1 S.D.) = ", format(PCI[2,4,4], digits=4, nsmall=4))
+    cat("\n", "Unstandardized effect when Z is low (Mean - 1 S.D.) and W is low (Mean - 1 S.D.) = ", format(PCI[2,4,2], digits=4, nsmall=4), "\n")
+
     cat("\n")
     cat("Percentile Confidence Intervals for Simple Slope Tests: Hi = +1SD; Lo = -1SD", rep("\n", 2))
     print(PCISDT, quote=FALSE, right=TRUE)
@@ -1892,23 +1900,17 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
       if (any(names(stdyx.estcoeff) %in% zw3)) Z7Xzw3 <- stdyx.estcoeff[zw3]
       if (any(names(stdyx.estcoeff) %in% zw4)) Z7Xzw4 <- stdyx.estcoeff[zw4]
 
-    ## Unstandardized Slopes ##
-#    TWx1 <- PCI[4,4,4] # Hi-Z, Hi-W
-#    TWx2 <- PCI[4,4,2] # Hi-Z, Lo-W
-#    TWx3 <- PCI[2,4,4] # Lo-Z, Hi-W
-#    TWx4 <- PCI[2,4,2] # Lo-Z, Lo-W
-
       ## Standardized Slopes ##
       TWx1 <- (Z7Xa1+Z7Xz1+Z7Xw1+Z7Xzw1)*(Z7Xa2+Z7Xz2+Z7Xw2+Z7Xzw2)*(Z7Xa3+Z7Xz3+Z7Xw3+Z7Xzw3)*(Z7Xa4+Z7Xz4+Z7Xw4+Z7Xzw4) # Hi-Z, Hi-W
       TWx2 <- (Z7Xa1+Z7Xz1-Z7Xw1-Z7Xzw1)*(Z7Xa2+Z7Xz2-Z7Xw2-Z7Xzw2)*(Z7Xa3+Z7Xz3-Z7Xw3-Z7Xzw3)*(Z7Xa4+Z7Xz4-Z7Xw4-Z7Xzw4) # Hi-Z, Lo-W
       TWx3 <- (Z7Xa1-Z7Xz1+Z7Xw1-Z7Xzw1)*(Z7Xa2-Z7Xz2+Z7Xw2-Z7Xzw2)*(Z7Xa3-Z7Xz3+Z7Xw3-Z7Xzw3)*(Z7Xa4-Z7Xz4+Z7Xw4-Z7Xzw4) # Lo-Z, Hi-W
       TWx4 <- (Z7Xa1-Z7Xz1-Z7Xw1+Z7Xzw1)*(Z7Xa2-Z7Xz2-Z7Xw2+Z7Xzw2)*(Z7Xa3-Z7Xz3-Z7Xw3+Z7Xzw3)*(Z7Xa4-Z7Xz4-Z7Xw4+Z7Xzw4) # Lo-Z, Lo-W
 
-      # -- Print standardized indirect effects -- #
-      cat("\n", "Standardized indirect effects when Z is high (Mean + 1 S.D.) and W is high (Mean + 1 S.D.) = ", format(TWx1, digits=4, nsmall=4))
-      cat("\n", "Standardized indirect effects when Z is high (Mean + 1 S.D.) and W is low (Mean - 1 S.D.) = ", format(TWx2, digits=4, nsmall=4))
-      cat("\n", "Standardized indirect effects when Z is low (Mean - 1 S.D.) and W is high (Mean + 1 S.D.) = ", format(TWx3, digits=4, nsmall=4))
-      cat("\n", "Standardized indirect effects when Z is low (Mean - 1 S.D.) and W is low (Mean - 1 S.D.) = ", format(TWx4, digits=4, nsmall=4), "\n")
+      # -- Print standardized effects -- #
+      cat("\n", "Standardized effects when Z is high (Mean + 1 S.D.) and W is high (Mean + 1 S.D.) = ", format(TWx1, digits=4, nsmall=4))
+      cat("\n", "Standardized effects when Z is high (Mean + 1 S.D.) and W is low (Mean - 1 S.D.) = ", format(TWx2, digits=4, nsmall=4))
+      cat("\n", "Standardized effects when Z is low (Mean - 1 S.D.) and W is high (Mean + 1 S.D.) = ", format(TWx3, digits=4, nsmall=4))
+      cat("\n", "Standardized effects when Z is low (Mean - 1 S.D.) and W is low (Mean - 1 S.D.) = ", format(TWx4, digits=4, nsmall=4), "\n")
 
       df_wide <- data.frame(
         x_var = c(-2,2),
@@ -1952,7 +1954,7 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
 
       ## == Close 3-Way Interaction Figure
     } else {
-      cat("\n", "Standardized indirect effects are not available", "\n")
+      cat("\n", "Standardized effects are not available", "\n")
     } # end (if stdyx.estcoeff)
 
   }

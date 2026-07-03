@@ -1863,7 +1863,7 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
     # -- Print unstandardized effects -- #
     cat("\n")
     cat("\n")
-    cat("\n", "Unstandardized effect when Z is high (Mean + 1 S.D.) and W is high (Mean + 1 S.D.) = ", format(PCI[4.4.4], digits=4, nsmall=4))
+    cat("\n", "Unstandardized effect when Z is high (Mean + 1 S.D.) and W is high (Mean + 1 S.D.) = ", format(PCI[4,4,4], digits=4, nsmall=4))
     cat("\n", "Unstandardized effect when Z is high (Mean + 1 S.D.) and W is low (Mean - 1 S.D.) = ", format(PCI[4,4,2], digits=4, nsmall=4))
     cat("\n", "Unstandardized effect when Z is low (Mean - 1 S.D.) and W is high (Mean + 1 S.D.) = ", format(PCI[2,4,4], digits=4, nsmall=4))
     cat("\n", "Unstandardized effect when Z is low (Mean - 1 S.D.) and W is low (Mean - 1 S.D.) = ", format(PCI[2,4,2], digits=4, nsmall=4), "\n")

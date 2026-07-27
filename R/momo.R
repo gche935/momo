@@ -273,10 +273,9 @@
 
 
 ## ====== Function "momo_mplus" Monte Carlo Confidence Intervals for Moderated Mediation (mplus) ====== ##
-#' Monte Carlo Simulation for Confidence Intervals of Moderated Mediation (Mplus)
+#' Monte Carlo Simulation for Confidence Intervals of Moderated Mediation (mplus)
 #'
-#' Generate confidence intervals of moderated-mediating effects from Mplus results using Monte Carlo simulation.
-#' Location of estimated parameters can be found in momo::TECH1().
+#' Generate confidence intervals of moderated-mediating effects from modsem results using Monte Carlo simulation.
 #'
 #' \if{html}{
 #' \figure{Figure.png}{options: width="75\%" alt="Description of my figure"}
@@ -286,27 +285,24 @@
 #' }
 #'
 #' @param mplus_output_file Mplus output (.out) file (output from Mplus).
-#' @param results_file Mplus a text file (.txt) that saves the Mplus results (RESULTS IS "filename.txt" in Mplus SAVEDATA:).
 #' @param Z name of moderate Z.
 #' @param W name of moderator W.
-#' @param varZ location of parameter varZ in Mplus Tech1 outputs.
-#' @param varW location of parameter varW in Mplus Tech1 outputs.
-#' @param a1 location of parameter a1 in Mplus Tech1 outputs.
-#' @param a2 location of parameter a2 in Mplus Tech1 outputs.
-#' @param a3 location of parameter a3 in Mplus Tech1 outputs.
-#' @param a4 location of parameter a4 in Mplus Tech1 outputs.
-#' @param z1 location of parameter z1 in Mplus Tech1 outputs.
-#' @param z2 location of parameter z2 in Mplus Tech1 outputs.
-#' @param z3 location of parameter z3 in Mplus Tech1 outputs.
-#' @param z4 location of parameter z4 in Mplus Tech1 outputs.
-#' @param w1 location of parameter w1 in Mplus Tech1 outputs.
-#' @param w2 location of parameter w2 in Mplus Tech1 outputs.
-#' @param w3 location of parameter w3 in Mplus Tech1 outputs.
-#' @param w4 location of parameter w4 in Mplus Tech1 outputs.
-#' @param zw1 location of parameter zw1 in Mplus Tech1 outputs.
-#' @param zw2 location of parameter zw2 in Mplus Tech1 outputs.
-#' @param zw3 location of parameter zw3 in Mplus Tech1 outputs.
-#' @param zw4 location of parameter zw4 in Mplus Tech1 outputs.
+#' @param a1 parameter name of a1 path (main effect).
+#' @param a2 parameter name of a2 path (main effect).
+#' @param a3 parameter name of a3 path (main effect).
+#' @param a4 parameter name of a4 path (main effect).
+#' @param z1 parameter name of z1 path (interaction effect).
+#' @param z2 parameter name of z2 path (interaction effect).
+#' @param z3 parameter name of z3 path (interaction effect).
+#' @param z4 parameter name of z4 path (interaction effect).
+#' @param w1 parameter name of w1 path (interaction effect).
+#' @param w2 parameter name of w2 path (interaction effect).
+#' @param w3 parameter name of w3 path (interaction effect).
+#' @param w4 parameter name of w4 path (interaction effect).
+#' @param zw1 parameter name of zw1 path (3-way interaction effect).
+#' @param zw2 parameter name of zw2 path (3-way interaction effect).
+#' @param zw3 parameter name of zw3 path (3-way interaction effect).
+#' @param zw4 parameter name of zw4 path (3-way interaction effect).
 #' @param R number of Monte Carlo simulation samples (in millions). For example, R=5 (default) generates 5,000,000 simulated samples.
 #'
 #' @return momo output for plotting Johnson-Neyman Figure.
@@ -315,11 +311,11 @@
 #'
 #' ## -- Example -- ##
 #'
-#' # mplus_output_file is "model cc4.out", results_file is "Model_CC4.txt" & moderator Z is "AUTO"
-#' # output momo object is mcObject
+#' # mplus_output_file is "mplusresults.out" & moderator Z is "AUTO"
+#' # output mccimm object is mcObject
 #'
-#' mcObject <- momo_mplus("model cc4.out", "Model_CC4.txt", Z = "AUTO", varZ = "72",
-#'             a1 = "60", a2 = "65", z1 = "62")
+#' mcObject <- momo_mplus("mplusresults.out", Z = "AUTO", 
+#'             a1 = "a1", a2 = "a2", z1 = "z1")
 #'
 #'
 #' # Change 2-Way Figure Title and/or Axis Labels Afterwards
@@ -336,68 +332,83 @@
 #' ggplot2::ggsave("New Standardized Interaction Figure.png", width = 22.86, height = 16.51, units = "cm")
 #'
 
-momo_mplus <- function(mplus_output_file = "mplus_output.out",
-                   results_file = "results.txt",
+momo_mplus <- function(mplus_output_file = "mplusresults.out",
                    Z="NA", W="NA",
-                   varZ="NA", varW="NA",
                    a1="NA", a2="NA", a3="NA", a4="NA",
                    z1="NA", z2="NA", z3="NA", z4="NA",
                    w1="NA", w2="NA", w3="NA", w4="NA",
                    zw1="NA", zw2="NA", zw3="NA", zw4="NA",
                    R=5) {
 
-  mplus_output <- readModels(mplus_output_file)
-  results <- mplus_output$parameters$unstandardized
-  temp <- scan(results_file, sep="")
-  stdyx.temp <- mplus_output$parameters$stdyx.standardized
-  no.parameters <- mplus_output$summaries$Parameters
-  # stdyx.temp <- temp[-(1:(2*no.parameters))]
+  ## ------------------------------- ##
 
-  Temp3 <- mplus_output$tech3$paramCov
-  Temp3[upper.tri(Temp3, diag = FALSE)] <- 0
-
-  Tech3 <- Temp3 + t(Temp3)
-  Tech3 <- Tech3 - diag(diag(Temp3))
+  ## -- Convert arguments to upper case -- ##
+  Z <- toupper(Z)
+  W <- toupper(W)
+  a1 <- toupper(a1)
+  a2 <- toupper(a2)
+  a3 <- toupper(a3)
+  a4 <- toupper(a4)
+  z1 <- toupper(z1)
+  z2 <- toupper(z2)
+  z3 <- toupper(z3)
+  z4 <- toupper(z4)
+  w1 <- toupper(w1)
+  w2 <- toupper(w2)
+  w3 <- toupper(w3)
+  w4 <- toupper(w4)
+  zw1 <- toupper(zw1)
+  zw2 <- toupper(zw2)
+  zw3 <- toupper(zw3)
+  zw4 <- toupper(zw4)
 
   ## -- Extract defined parameters and vcov -- ##
-  dp <- c(varZ, varW, a1, a2, a3, a4, z1, z2, z3, z4, w1, w2, w3, w4, zw1, zw2, zw3, zw4)
-
-  dp_no <- suppressWarnings(as.numeric(dp))
-  dp_list <- c("varZ", "varW", "a1", "a2", "a3", "a4", "z1", "z2", "z3", "z4", "w1", "w2", "w3", "w4", "zw1", "zw2", "zw3", "zw4")
-  non_na_list <- dp_list[which(!is.na(dp_no))]
+  varZ <- "NA"
+  varW <- "NA"
+  Z <- toupper(Z)
+  W <- toupper(W)
+  if (Z != "NA") varZ <- paste0(Z, "~~", Z)
+  if (W != "NA") varW <- paste0(W, "~~", W)
+  dp <- c(a1, a2, a3, a4, z1, z2, z3, z4, w1, w2, w3, w4, zw1, zw2, zw3, zw4, varZ, varW)
+  dp[1:(length(dp) - 2)] <- toupper(dp[1:(length(dp) - 2)])
   dp <- dp[dp != "NA"]
-  dp <- as.numeric(dp)
 
-  estcoeff <- temp[dp]
-  names(estcoeff) <- non_na_list
 
-  stdyx.dp <- dp + 2*no.parameters
-  stdyx.estcoeff <- temp[stdyx.dp]
-  names(stdyx.estcoeff) <- non_na_list
+  my_model <- readModels(mplus_output_file)
 
-  Tech3 <- Tech3[dp, dp]
-  rownames(Tech3) <- non_na_list
-  colnames(Tech3) <- non_na_list
+  VAR.LIST <- my_model$parameters$unstandardized[which(my_model$parameters$unstandardized$paramHeader == "Variances"), "param"]
+  VAR <- diag(my_model$tech1$parameterSpecification$X$psi[VAR.LIST, VAR.LIST])
+  names(VAR) <- paste0(names(VAR), "~~", names(VAR))
+  NEW <- my_model$tech1$parameterSpecification$THE.ADDITIONAL.PARAMETERS$new_additional
+  names(NEW) <- colnames(NEW)
+  dpp <- c(VAR, NEW)
+  dpp <- sort(dpp)
 
-  # -- Reassigning variable names -- #
-  if (varZ != "NA") varZ <- "varZ"
-  if (varW != "NA") varW <- "varW"
-  if (a1 != "NA") a1 <- "a1"
-  if (a2 != "NA") a2 <- "a2"
-  if (a3 != "NA") a3 <- "a3"
-  if (a4 != "NA") a4 <- "a4"
-  if (z1 != "NA") z1 <- "z1"
-  if (z2 != "NA") z2 <- "z2"
-  if (z3 != "NA") z3 <- "z3"
-  if (z4 != "NA") z4 <- "z4"
-  if (w1 != "NA") w1 <- "w1"
-  if (w2 != "NA") w2 <- "w2"
-  if (w3 != "NA") w3 <- "w3"
-  if (w4 != "NA") w4 <- "w4"
-  if (zw1 != "NA") zw1 <- "zw1"
-  if (zw2 != "NA") zw2 <- "zw2"
-  if (zw3 != "NA") zw3 <- "zw3"
-  if (zw4 != "NA") zw4 <- "zw4"
+  Tech3 <- my_model$tech3$paramCov
+  Tech3[upper.tri(Tech3)] <- t(Tech3)[upper.tri(Tech3)]
+  no.Tech1 <- nrow(Tech3)
+  Tech3 <- Tech3[dpp, dpp]
+  colnames(Tech3) <- names(dpp)
+  rownames(Tech3) <- names(dpp)
+
+  estcoeff <- scan(gsub('"', '', my_model$input$savedata$results), sep = "", what = numeric())
+  
+  if ("stdyx.standardized" %in% names(my_model$parameters) == "FALSE") {
+    stdyx.estcoeff <- matrix(nrow = 0, ncol = 0)
+  } else { 
+    d <- vector()
+    for (i in 1:length(NEW)) {
+      d <- c(d, which(estcoeff == estcoeff[NEW[i]])[1])
+    }
+    d <- d + 2*no.Tech1
+    names(d) <- names(NEW)
+    stdyx.estcoeff <- estcoeff[d]
+    names(stdyx.estcoeff) <- names(d) 
+  } # end if stdyx
+
+  estcoeff <- estcoeff[dpp]
+  names(estcoeff) <- names(dpp)
+
 
   return_momo <- momo(estcoeff, stdyx.estcoeff, Tech3,
                         Z, W,
@@ -409,9 +420,6 @@ momo_mplus <- function(mplus_output_file = "mplus_output.out",
                         R=5)
 
   return(return_momo)
-
-
-  ## ------------------------------- ##
 
 }  ## end (Function "momo_mplus") ##
 
@@ -651,7 +659,7 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
     print(BCCI, quote=FALSE, right=TRUE)
     cat("\n")
 
-    if (is.null(stdyx.estcoeff) != TRUE) {
+    if (all(is.na(stdyx.estcoeff)) == "FALSE") {
       # - Define estimated parameters for calculating standardized indirect effects - #
       if (any(names(stdyx.estcoeff) %in% a1)) Z7Xa1 <- stdyx.estcoeff[a1]
       if (any(names(stdyx.estcoeff) %in% a2)) Z7Xa2 <- stdyx.estcoeff[a2]
@@ -858,8 +866,7 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
     print(BCCI.SST, quote=FALSE, right=TRUE)
     cat("\n")
 
-
-    if (is.null(stdyx.estcoeff) != TRUE) {
+    if (all(is.na(stdyx.estcoeff)) == "FALSE") {
       # -- Plot Standardized 2-Way Interaction Effects -- #
       # Define estimated parameters for calculating indirect effects
       if (any(names(stdyx.estcoeff) %in% a1)) Z7Xa1 <- stdyx.estcoeff[a1]
@@ -1079,9 +1086,7 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
     print(BCCI.SST, quote=FALSE, right=TRUE)
     cat("\n")
 
-
-    if (is.null(stdyx.estcoeff) != TRUE) {
-
+    if (all(is.na(stdyx.estcoeff)) == "FALSE") {
       # -- Plot Standardized 2-Way Interaction Effects -- #
       # Define estimated parameters for calculating indirect effects
       if (any(names(stdyx.estcoeff) %in% a1)) Z7Xa1 <- stdyx.estcoeff[a1]
@@ -1255,8 +1260,7 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
     cat("\n")
 
 
-    if (is.null(stdyx.estcoeff) != TRUE) {
-
+    if (all(is.na(stdyx.estcoeff)) == "FALSE") {
       # -- Plot Standardized 2-Way Interaction Effects -- #
       # Define estimated parameters for calculating indirect effects
       if (any(names(stdyx.estcoeff) %in% a1)) Z7Xa1 <- stdyx.estcoeff[a1]
@@ -1429,8 +1433,7 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
     print(BCCI.SST, quote=FALSE, right=TRUE)
     cat("\n")
 
-    if (is.null(stdyx.estcoeff) != TRUE) {
-
+    if (all(is.na(stdyx.estcoeff)) == "FALSE") {
       # -- Plot Standardized 2-Way Interaction Effects -- #
       # Define estimated parameters for calculating standardized indirect effects
       if (any(names(stdyx.estcoeff) %in% a1)) Z7Xa1 <- stdyx.estcoeff[a1]
@@ -1878,7 +1881,7 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
     print(BCCISDT, quote=FALSE, right=TRUE)
     cat("\n")
 
-    if (is.null(stdyx.estcoeff) != TRUE) {
+    if (all(is.na(stdyx.estcoeff)) == "FALSE") {
 
       ## == Create 3-way Standardized Interaction Figure == ##
 
@@ -2275,22 +2278,22 @@ momo_lavaan_fun <- function(object, Sfunction="NULL", R=5) {
 #'
 #' @param mplus_output_file Mplus output (.out) file (output from Mplus).
 #' @param results_file Mplus a text file (.txt) that saves the Mplus results (RESULTS IS "filename.txt" in Mplus SAVEDATA:).
-#' @param a1 location of parameter a1 in Mplus Tech1 outputs.
-#' @param a2 location of parameter a2 in Mplus Tech1 outputs.
-#' @param a3 location of parameter a3 in Mplus Tech1 outputs.
-#' @param a4 location of parameter a4 in Mplus Tech1 outputs.
-#' @param z1 location of parameter z1 in Mplus Tech1 outputs.
-#' @param z2 location of parameter z2 in Mplus Tech1 outputs.
-#' @param z3 location of parameter z3 in Mplus Tech1 outputs.
-#' @param z4 location of parameter z4 in Mplus Tech1 outputs.
-#' @param w1 location of parameter w1 in Mplus Tech1 outputs.
-#' @param w2 location of parameter w2 in Mplus Tech1 outputs.
-#' @param w3 location of parameter w3 in Mplus Tech1 outputs.
-#' @param w4 location of parameter w4 in Mplus Tech1 outputs.
-#' @param zw1 location of parameter zw1 in Mplus Tech1 outputs.
-#' @param zw2 location of parameter zw2 in Mplus Tech1 outputs.
-#' @param zw3 location of parameter zw3 in Mplus Tech1 outputs.
-#' @param zw4 location of parameter zw4 in Mplus Tech1 outputs.
+#' @param a1 parameter name of a1 in MODEL CONSTRAINT: NEW.
+#' @param a2 parameter name of a2 in MODEL CONSTRAINT: NEW.
+#' @param a3 parameter name of a3 in MODEL CONSTRAINT: NEW.
+#' @param a4 parameter name of a4 in MODEL CONSTRAINT: NEW.
+#' @param z1 parameter name of z1 in MODEL CONSTRAINT: NEW.
+#' @param z2 parameter name of z2 in MODEL CONSTRAINT: NEW.
+#' @param z3 parameter name of z3 in MODEL CONSTRAINT: NEW.
+#' @param z4 parameter name of z4 in MODEL CONSTRAINT: NEW.
+#' @param w1 parameter name of w1 in MODEL CONSTRAINT: NEW.
+#' @param w2 parameter name of w2 in MODEL CONSTRAINT: NEW.
+#' @param w3 parameter name of w3 in MODEL CONSTRAINT: NEW.
+#' @param w4 parameter name of w4 in MODEL CONSTRAINT: NEW.
+#' @param zw1 parameter name of zw1 in MODEL CONSTRAINT: NEW.
+#' @param zw2 parameter name of zw2 in MODEL CONSTRAINT: NEW.
+#' @param zw3 parameter name of zw3 in MODEL CONSTRAINT: NEW.
+#' @param zw4 parameter name of zw4 in MODEL CONSTRAINT: NEW.
 #' @param Sfunction function of estimated parameters from Mplus outputs.
 #' @param R number of Monte Carlo simulation samples (in millions). For example, R=5 (default) generates 5,000,000 simulated samples.
 #'
@@ -2300,64 +2303,77 @@ momo_lavaan_fun <- function(object, Sfunction="NULL", R=5) {
 #'
 #' ## -- Example -- ##
 #'
-#' # mplus_output_file is "model cc4.out", results_file is "Model_CC4.txt" & moderator Z is "AUTO"
+#' # mplus_output_file is "model cc4.out" 
 #' # output momo object is mcObject
 #'
-#' mcObject <- momo_mplus_fun("model cc4.out", "Model_CC4.txt",
-#'             a1 = "60", a2 = "65", Sfunction="a1*a2")
+#' mcObject <- momo_mplus_fun("model cc4.out", a1 = "A1", a2 = "A2", Sfunction="a1*a2")
 #'
 
 momo_mplus_fun <- function(mplus_output_file = "mplus_output.out",
-                             results_file = "results.txt",
                              a1="NA", a2="NA", a3="NA", a4="NA",
                              z1="NA", z2="NA", z3="NA", z4="NA",
                              w1="NA", w2="NA", w3="NA", w4="NA",
                              zw1="NA", zw2="NA", zw3="NA", zw4="NA",
                              Sfunction="NULL", R=5) {
 
-  mplus_output <- readModels(mplus_output_file)
-  results <- mplus_output$parameters$unstandardized
-  temp <- scan(results_file, sep="")
-
-  Temp3 <- mplus_output$tech3$paramCov
-  Temp3[upper.tri(Temp3, diag = FALSE)] <- 0
-
-  Tech3 <- Temp3 + t(Temp3)
-  Tech3 <- Tech3 - diag(diag(Temp3))
+  ## -- Convert arguments to upper case -- ##
+  a1 <- toupper(a1)
+  a2 <- toupper(a2)
+  a3 <- toupper(a3)
+  a4 <- toupper(a4)
+  z1 <- toupper(z1)
+  z2 <- toupper(z2)
+  z3 <- toupper(z3)
+  z4 <- toupper(z4)
+  w1 <- toupper(w1)
+  w2 <- toupper(w2)
+  w3 <- toupper(w3)
+  w4 <- toupper(w4)
+  zw1 <- toupper(zw1)
+  zw2 <- toupper(zw2)
+  zw3 <- toupper(zw3)
+  zw4 <- toupper(zw4)
 
   ## -- Extract defined parameters and vcov -- ##
   dp <- c(a1, a2, a3, a4, z1, z2, z3, z4, w1, w2, w3, w4, zw1, zw2, zw3, zw4)
-
-  dp_no <- suppressWarnings(as.numeric(dp))
-  dp_list <- c("a1", "a2", "a3", "a4", "z1", "z2", "z3", "z4", "w1", "w2", "w3", "w4", "zw1", "zw2", "zw3", "zw4")
-  non_na_list <<- dp_list[which(!is.na(dp_no))]
+  dp[1:(length(dp) - 2)] <- toupper(dp[1:(length(dp) - 2)])
   dp <- dp[dp != "NA"]
-  dp <- as.numeric(dp)
 
-  estcoeff <- temp[dp]
-  names(estcoeff) <- non_na_list
+  my_model <- readModels(mplus_output_file)
 
-  Tech3 <- Tech3[dp, dp]
-  rownames(Tech3) <- non_na_list
-  colnames(Tech3) <- non_na_list
+  NEW <- my_model$tech1$parameterSpecification$THE.ADDITIONAL.PARAMETERS$new_additional
+  names(NEW) <- colnames(NEW)
+
+  Tech3 <- my_model$tech3$paramCov
+  Tech3[upper.tri(Tech3)] <- t(Tech3)[upper.tri(Tech3)]
+  no.Tech1 <- nrow(Tech3)
+  Tech3 <- Tech3[NEW, NEW]
+  colnames(Tech3) <- names(NEW)
+  rownames(Tech3) <- names(NEW)
+
+  estcoeff <- scan(gsub('"', '', my_model$input$savedata$results), sep = "", what = numeric())
+
+  estcoeff <- estcoeff[NEW]
+  names(estcoeff) <- names(NEW)
+
 
   # -- Reassigning variable names -- #
-  if (a1 != "NA") a1 <- temp[as.numeric(a1)]
-  if (a2 != "NA") a2 <- temp[as.numeric(a2)]
-  if (a3 != "NA") a3 <- temp[as.numeric(a3)]
-  if (a4 != "NA") a4 <- temp[as.numeric(a4)]
-  if (z1 != "NA") z1 <- temp[as.numeric(z1)]
-  if (z2 != "NA") z2 <- temp[as.numeric(z2)]
-  if (z3 != "NA") z3 <- temp[as.numeric(z3)]
-  if (z4 != "NA") z4 <- temp[as.numeric(z4)]
-  if (w1 != "NA") w1 <- temp[as.numeric(w1)]
-  if (w2 != "NA") w2 <- temp[as.numeric(w2)]
-  if (w3 != "NA") w3 <- temp[as.numeric(w3)]
-  if (w4 != "NA") w4 <- temp[as.numeric(w4)]
-  if (zw1 != "NA") zw1 <- temp[as.numeric(zw1)]
-  if (zw2 != "NA") zw2 <- temp[as.numeric(zw2)]
-  if (zw3 != "NA") zw3 <- temp[as.numeric(zw3)]
-  if (zw4 != "NA") zw4 <- temp[as.numeric(zw4)]
+  if (a1 != "NA") a1 <- estcoeff["A1"]
+  if (a2 != "NA") a2 <- estcoeff["A2"]
+  if (a3 != "NA") a3 <- estcoeff["A3"]
+  if (a4 != "NA") a4 <- estcoeff["A4"]
+  if (z1 != "NA") z1 <- estcoeff["Z1"]
+  if (z2 != "NA") z2 <- estcoeff["Z2"]
+  if (z3 != "NA") z3 <- estcoeff["Z3"]
+  if (z4 != "NA") z4 <- estcoeff["Z4"]
+  if (w1 != "NA") w1 <- estcoeff["W1"]
+  if (w2 != "NA") w2 <- estcoeff["W2"]
+  if (w3 != "NA") w3 <- estcoeff["W3"]
+  if (w4 != "NA") w4 <- estcoeff["W4"]
+  if (zw1 != "NA") zw1 <- estcoeff["ZW1"]
+  if (zw2 != "NA") zw2 <- estcoeff["ZW2"]
+  if (zw3 != "NA") zw3 <- estcoeff["ZW3"]
+  if (zw4 != "NA") zw4 <- estcoeff["ZW4"]
 
   ## -- Monte Carlo Simulation of R*1e6 samples, default: R = 5 -- ##
   mcmc <<- MASS::mvrnorm(n=R*1e6, mu=estcoeff, Sigma=Tech3, tol = 1e-6)

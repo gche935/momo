@@ -314,7 +314,7 @@
 #' # mplus_output_file is "mplusresults.out" & moderator Z is "AUTO"
 #' # output mccimm object is mcObject
 #'
-#' mcObject <- momo_mplus("mplusresults.out", Z = "AUTO", 
+#' mcObject <- momo_mplus("mplusresults.out", Z = "AUTO",
 #'             a1 = "a1", a2 = "a2", z1 = "z1")
 #'
 #'
@@ -334,6 +334,7 @@
 
 momo_mplus <- function(mplus_output_file = "mplusresults.out",
                    Z="NA", W="NA",
+                   varZ="NA", varW="NA",
                    a1="NA", a2="NA", a3="NA", a4="NA",
                    z1="NA", z2="NA", z3="NA", z4="NA",
                    w1="NA", w2="NA", w3="NA", w4="NA",
@@ -345,6 +346,8 @@ momo_mplus <- function(mplus_output_file = "mplusresults.out",
   ## -- Convert arguments to upper case -- ##
   Z <- toupper(Z)
   W <- toupper(W)
+  varZ <- toupper(varZ)
+  varW <- toupper(varW)
   a1 <- toupper(a1)
   a2 <- toupper(a2)
   a3 <- toupper(a3)
@@ -363,12 +366,6 @@ momo_mplus <- function(mplus_output_file = "mplusresults.out",
   zw4 <- toupper(zw4)
 
   ## -- Extract defined parameters and vcov -- ##
-  varZ <- "NA"
-  varW <- "NA"
-  Z <- toupper(Z)
-  W <- toupper(W)
-  if (Z != "NA") varZ <- paste0(Z, "~~", Z)
-  if (W != "NA") varW <- paste0(W, "~~", W)
   dp <- c(a1, a2, a3, a4, z1, z2, z3, z4, w1, w2, w3, w4, zw1, zw2, zw3, zw4, varZ, varW)
   dp[1:(length(dp) - 2)] <- toupper(dp[1:(length(dp) - 2)])
   dp <- dp[dp != "NA"]
@@ -376,20 +373,14 @@ momo_mplus <- function(mplus_output_file = "mplusresults.out",
 
   my_model <- readModels(mplus_output_file)
 
-  VAR.LIST <- my_model$parameters$unstandardized[which(my_model$parameters$unstandardized$paramHeader == "Variances"), "param"]
-  VAR <- diag(my_model$tech1$parameterSpecification$X$psi[VAR.LIST, VAR.LIST])
-  names(VAR) <- paste0(names(VAR), "~~", names(VAR))
   NEW <- my_model$tech1$parameterSpecification$THE.ADDITIONAL.PARAMETERS$new_additional
-  names(NEW) <- colnames(NEW)
-  dpp <- c(VAR, NEW)
-  dpp <- sort(dpp)
 
   Tech3 <- my_model$tech3$paramCov
   Tech3[upper.tri(Tech3)] <- t(Tech3)[upper.tri(Tech3)]
   no.Tech1 <- nrow(Tech3)
-  Tech3 <- Tech3[dpp, dpp]
-  colnames(Tech3) <- names(dpp)
-  rownames(Tech3) <- names(dpp)
+  Tech3 <- Tech3[NEW, NEW]
+  colnames(Tech3) <- colnames(NEW)
+  rownames(Tech3) <- colnames(NEW)
 
   estcoeff <- scan(gsub('"', '', my_model$input$savedata$results), sep = "", what = numeric())
   
@@ -406,9 +397,19 @@ momo_mplus <- function(mplus_output_file = "mplusresults.out",
     names(stdyx.estcoeff) <- names(d) 
   } # end if stdyx
 
-  estcoeff <- estcoeff[dpp]
-  names(estcoeff) <- names(dpp)
+  estcoeff <- estcoeff[NEW]
+  names(estcoeff) <- colnames(NEW)
 
+  if (Z != "NA") {
+    colnames(Tech3)[which(colnames(Tech3) == varZ)] <- paste0(Z, "~~", Z)
+    rownames(Tech3)[which(rownames(Tech3) == varZ)] <- paste0(Z, "~~", Z)
+    names(estcoeff)[which(names(estcoeff) == varZ)] <- paste0(Z, "~~", Z)
+  }
+  if (W != "NA") {
+    colnames(Tech3)[which(colnames(Tech3) == varW)] <- paste0(W, "~~", W)
+    rownames(Tech3)[which(rownames(Tech3) == varW)] <- paste0(W, "~~", W)
+    names(estcoeff)[which(names(estcoeff) == varW)] <- paste0(W, "~~", W)
+  }
 
   return_momo <- momo(estcoeff, stdyx.estcoeff, Tech3,
                         Z, W,
@@ -422,6 +423,8 @@ momo_mplus <- function(mplus_output_file = "mplusresults.out",
   return(return_momo)
 
 }  ## end (Function "momo_mplus") ##
+
+
 
 
 
@@ -2303,7 +2306,7 @@ momo_lavaan_fun <- function(object, Sfunction="NULL", R=5) {
 #'
 #' ## -- Example -- ##
 #'
-#' # mplus_output_file is "model cc4.out" 
+#' # mplus_output_file is "model cc4.out"
 #' # output momo object is mcObject
 #'
 #' mcObject <- momo_mplus_fun("model cc4.out", a1 = "A1", a2 = "A2", Sfunction="a1*a2")
@@ -2920,5 +2923,6 @@ Two_Way_Figure <- function(estX.lo, estX.hi) {
 } # end (Sub-Function: Two-Way_Figure)
 
 ## ===== Close 2-Way Standardized Interaction Figure ===== ##
+
 
 

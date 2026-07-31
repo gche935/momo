@@ -314,7 +314,7 @@
 #' # mplus_output_file is "mplusresults.out" & moderator Z is "AUTO"
 #' # output mccimm object is mcObject
 #'
-#' mcObject <- momo_mplus("mplusresults.out", Z = "AUTO", 
+#' mcObject <- momo_mplus("mplusresults.out", Z = "AUTO",
 #'             a1 = "a1", a2 = "a2", z1 = "z1")
 #'
 #'
@@ -375,6 +375,8 @@ momo_mplus <- function(mplus_output_file = "mplusresults.out",
 
   my_model <- readModels(mplus_output_file)
   VAR.LIST <- my_model$parameters$unstandardized[which(my_model$parameters$unstandardized$paramHeader == "Variances"), "param"]
+  VAR.L1 <- vector()
+  VAR.L2 <- vector()
 
   if ("BetweenWithin" %in% colnames(my_model$parameters$unstandardized) == TRUE) {
     if (length(diag(my_model$tech1$parameterSpecification$WITHIN$psi)[VAR.LIST]) != 0) {
@@ -386,7 +388,7 @@ momo_mplus <- function(mplus_output_file = "mplusresults.out",
       names(VAR.L2) <- paste0(names(VAR.L2), ".BETWEEN~~", names(VAR.L2), ".BETWEEN")
     }
     VAR <- c(VAR.L1, VAR.L2)
-  } else { 
+  } else {
     VAR <- diag(my_model$tech1$parameterSpecification$X$psi)[VAR.LIST]
     names(VAR) <- paste0(names(VAR), "~~", names(VAR))
   } # end Between/Within
@@ -404,10 +406,10 @@ momo_mplus <- function(mplus_output_file = "mplusresults.out",
   rownames(Tech3) <- names(dpp)
 
   estcoeff <- scan(gsub('"', '', my_model$input$savedata$results), sep = "", what = numeric())
-  
+
   if ("stdyx.standardized" %in% names(my_model$parameters) == "FALSE") {
     stdyx.estcoeff <- matrix(nrow = 0, ncol = 0)
-  } else { 
+  } else {
     d <- vector()
     for (i in 1:length(NEW)) {
       d <- c(d, which(estcoeff == estcoeff[NEW[i]])[1])
@@ -416,7 +418,7 @@ momo_mplus <- function(mplus_output_file = "mplusresults.out",
     names(d) <- names(NEW)
     stdyx.estcoeff <- scan("Model_CC4.txt", sep = "", what = numeric())
     stdyx.estcoeff <- stdyx.estcoeff[d]
-    names(stdyx.estcoeff) <- names(d) 
+    names(stdyx.estcoeff) <- names(d)
   } # end if stdyx
 
   estcoeff <- estcoeff[dpp]

@@ -453,110 +453,6 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
                    a4="NA", z4="NA", w4="NA", zw4="NA",
                    R=5) {
 
-  ## -- Number of Moderating Effects -- ##
-  NoModz <- 0
-  NoModw <- 0
-  if (z1 != "NA") NoModz <- NoModz + 1
-  if (z2 != "NA") NoModz <- NoModz + 1
-  if (z3 != "NA") NoModz <- NoModz + 1
-  if (z4 != "NA") NoModz <- NoModz + 1
-  if (w1 != "NA") NoModw <- NoModw + 1
-  if (w2 != "NA") NoModw <- NoModw + 1
-  if (w3 != "NA") NoModw <- NoModw + 1
-  if (w4 != "NA") NoModw <- NoModw + 1
-  NoMod <- NoModz + NoModw
-  ## ----- ##
-
-
-  ## -- Location of Moderator for calculation of Index MM -- ##
-  if (NoMod == 1) {
-    if (z1 != "NA") PoMod <- 1
-    if (z2 != "NA") PoMod <- 2
-    if (z3 != "NA") PoMod <- 3
-    if (z4 != "NA") PoMod <- 4
-    if (w1 != "NA") PoMod <- 1
-    if (w2 != "NA") PoMod <- 2
-    if (w3 != "NA") PoMod <- 3
-    if (w4 != "NA") PoMod <- 4
-  } # end (if (NoMod == 1))
-  ## ------------------------------ ##
-
-
-  ## -- Initialize a-paths to 1 -- ##
-  U7Xa1 <- 1
-  U7Xa2 <- 1
-  U7Xa3 <- 1
-  U7Xa4 <- 1
-  U7XSa1 <- matrix(1, R*1e6)
-  U7XSa2 <- matrix(1, R*1e6)
-  U7XSa3 <- matrix(1, R*1e6)
-  U7XSa4 <- matrix(1, R*1e6)
-  ## ------------------------------ ##
-
-
-  ## -- Initialize interaction paths to 0 -- ##
-  U7Xz1 <- 0
-  U7Xz2 <- 0
-  U7Xz3 <- 0
-  U7Xz4 <- 0
-  U7XSz1 <- matrix(0, R*1e6)
-  U7XSz2 <- matrix(0, R*1e6)
-  U7XSz3 <- matrix(0, R*1e6)
-  U7XSz4 <- matrix(0, R*1e6)
-
-  U7Xw1 <- 0
-  U7Xw2 <- 0
-  U7Xw3 <- 0
-  U7Xw4 <- 0
-  U7XSw1 <- matrix(0, R*1e6)
-  U7XSw2 <- matrix(0, R*1e6)
-  U7XSw3 <- matrix(0, R*1e6)
-  U7XSw4 <- matrix(0, R*1e6)
-
-  U7Xzw1 <- 0
-  U7Xzw2 <- 0
-  U7Xzw3 <- 0
-  U7Xzw4 <- 0
-  U7XSzw1 <- matrix(0, R*1e6)
-  U7XSzw2 <- matrix(0, R*1e6)
-  U7XSzw3 <- matrix(0, R*1e6)
-  U7XSzw4 <- matrix(0, R*1e6)
-  ## ------------------------------ ##
-
-
-  ## -- Initialize stdZ and stdW -- ##
-  stdZ <- 1
-  stdW <- 1
-  SstdZ <- matrix(1, R*1e6)
-  SstdW <- matrix(1, R*1e6)
-  ## ------------------------------ ##
-
-
-  ## -- Initialize standardized a-paths to 1 -- ##
-  Z7Xa1 <- 1
-  Z7Xa2 <- 1
-  Z7Xa3 <- 1
-  Z7Xa4 <- 1
-  ## ------------------------------ ##
-
-
-  ## -- Initialize standardized interaction paths to 0 -- ##
-  Z7Xz1 <- 0
-  Z7Xz2 <- 0
-  Z7Xz3 <- 0
-  Z7Xz4 <- 0
-
-  Z7Xw1 <- 0
-  Z7Xw2 <- 0
-  Z7Xw3 <- 0
-  Z7Xw4 <- 0
-
-  Z7Xzw1 <- 0
-  Z7Xzw2 <- 0
-  Z7Xzw3 <- 0
-  Z7Xzw4 <- 0
-  ## ------------------------------ ##
-
 
   ## -- Monte Carlo Simulation of R*1e6 samples, default: R = 5 -- ##
   mcmc <- MASS::mvrnorm(n=R*1e6, mu=estcoeff, Sigma=Tech3, tol = 1e-6)
@@ -591,6 +487,112 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
   cat("\n", "   Number of completed simulated samples = ", b.no, rep("\n",2))
 
   ## ------------------------------ ##
+
+
+  ## -- Number of Moderating Effects -- ##
+  NoModz <- 0
+  NoModw <- 0
+  if (z1 != "NA") NoModz <- NoModz + 1
+  if (z2 != "NA") NoModz <- NoModz + 1
+  if (z3 != "NA") NoModz <- NoModz + 1
+  if (z4 != "NA") NoModz <- NoModz + 1
+  if (w1 != "NA") NoModw <- NoModw + 1
+  if (w2 != "NA") NoModw <- NoModw + 1
+  if (w3 != "NA") NoModw <- NoModw + 1
+  if (w4 != "NA") NoModw <- NoModw + 1
+  NoMod <- NoModz + NoModw
+  ## ----- ##
+
+
+  ## -- Location of Moderator for calculation of Index MM -- ##
+  if (NoMod == 1) {
+    if (z1 != "NA") PoMod <- 1
+    if (z2 != "NA") PoMod <- 2
+    if (z3 != "NA") PoMod <- 3
+    if (z4 != "NA") PoMod <- 4
+    if (w1 != "NA") PoMod <- 1
+    if (w2 != "NA") PoMod <- 2
+    if (w3 != "NA") PoMod <- 3
+    if (w4 != "NA") PoMod <- 4
+  } # end (if (NoMod == 1))
+  ## ------------------------------ ##
+
+
+  ## -- Initialize a-paths to 1 -- ##
+  U7Xa1 <- 1
+  U7Xa2 <- 1
+  U7Xa3 <- 1
+  U7Xa4 <- 1
+  U7XSa1 <- matrix(1, b.no)
+  U7XSa2 <- matrix(1, b.no)
+  U7XSa3 <- matrix(1, b.no)
+  U7XSa4 <- matrix(1, b.no)
+  ## ------------------------------ ##
+
+
+  ## -- Initialize interaction paths to 0 -- ##
+  U7Xz1 <- 0
+  U7Xz2 <- 0
+  U7Xz3 <- 0
+  U7Xz4 <- 0
+  U7XSz1 <- matrix(0, b.no)
+  U7XSz2 <- matrix(0, b.no)
+  U7XSz3 <- matrix(0, b.no)
+  U7XSz4 <- matrix(0, b.no)
+
+  U7Xw1 <- 0
+  U7Xw2 <- 0
+  U7Xw3 <- 0
+  U7Xw4 <- 0
+  U7XSw1 <- matrix(0, b.no)
+  U7XSw2 <- matrix(0, b.no)
+  U7XSw3 <- matrix(0, b.no)
+  U7XSw4 <- matrix(0, b.no)
+
+  U7Xzw1 <- 0
+  U7Xzw2 <- 0
+  U7Xzw3 <- 0
+  U7Xzw4 <- 0
+  U7XSzw1 <- matrix(0, b.no)
+  U7XSzw2 <- matrix(0, b.no)
+  U7XSzw3 <- matrix(0, b.no)
+  U7XSzw4 <- matrix(0, b.no)
+  ## ------------------------------ ##
+
+
+  ## -- Initialize stdZ and stdW -- ##
+  stdZ <- 1
+  stdW <- 1
+  SstdZ <- matrix(1, b.no)
+  SstdW <- matrix(1, b.no)
+  ## ------------------------------ ##
+
+
+  ## -- Initialize standardized a-paths to 1 -- ##
+  Z7Xa1 <- 1
+  Z7Xa2 <- 1
+  Z7Xa3 <- 1
+  Z7Xa4 <- 1
+  ## ------------------------------ ##
+
+
+  ## -- Initialize standardized interaction paths to 0 -- ##
+  Z7Xz1 <- 0
+  Z7Xz2 <- 0
+  Z7Xz3 <- 0
+  Z7Xz4 <- 0
+
+  Z7Xw1 <- 0
+  Z7Xw2 <- 0
+  Z7Xw3 <- 0
+  Z7Xw4 <- 0
+
+  Z7Xzw1 <- 0
+  Z7Xzw2 <- 0
+  Z7Xzw3 <- 0
+  Z7Xzw4 <- 0
+  ## ------------------------------ ##
+
 
 
   ### --- No Moderating Effect --- ###

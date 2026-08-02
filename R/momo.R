@@ -467,27 +467,6 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
   stdyx.estcoeff <- stdyx.estcoeff[dp]
   mcmc <- mcmc[, dp]
 
-  # -- Retain simulated samples with variance larger than or equal to 0 -- #
-  if (NoMod == 1) {
-    if (NoModz != 0){
-      mcmc <- mcmc[which(mcmc[, varZ] >= 0),]
-    } else {
-      mcmc <- mcmc[which(mcmc[, varW] >= 0),]
-    }
-  } else if (NoMod == 2) {
-    mcmc <- mcmc[which(mcmc[, varZ] >= 0),]
-    mcmc <- mcmc[which(mcmc[, varW] >= 0),]
-  } # end (if NoMod)
-
-  b.no <- nrow(mcmc)
-  R.no <- format(R*1e6, scientific = FALSE)
-
-  # -- Print number of bootstrap samples -- #
-  cat("\n", "   Number of requested simulated samples = ", R.no)
-  cat("\n", "   Number of completed simulated samples = ", b.no, rep("\n",2))
-
-  ## ------------------------------ ##
-
 
   ## -- Number of Moderating Effects -- ##
   NoModz <- 0
@@ -515,6 +494,28 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
     if (w3 != "NA") PoMod <- 3
     if (w4 != "NA") PoMod <- 4
   } # end (if (NoMod == 1))
+  ## ------------------------------ ##
+
+
+  # -- Retain simulated samples with variance larger than or equal to 0 -- #
+  if (NoMod == 1) {
+    if (NoModz != 0){
+      mcmc <- mcmc[which(mcmc[, varZ] >= 0),]
+    } else {
+      mcmc <- mcmc[which(mcmc[, varW] >= 0),]
+    }
+  } else if (NoMod == 2) {
+    mcmc <- mcmc[which(mcmc[, varZ] >= 0),]
+    mcmc <- mcmc[which(mcmc[, varW] >= 0),]
+  } # end (if NoMod)
+
+  b.no <- nrow(mcmc)
+  R.no <- format(R*1e6, scientific = FALSE)
+
+  # -- Print number of bootstrap samples -- #
+  cat("\n", "   Number of requested simulated samples = ", R.no)
+  cat("\n", "   Number of completed simulated samples = ", b.no, rep("\n",2))
+
   ## ------------------------------ ##
 
 

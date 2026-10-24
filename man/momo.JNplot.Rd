@@ -37,7 +37,7 @@ momo.JNplot(
 a figure for changing the titles.
 }
 \description{
-Generate Johnson-Neyman Figure from momo.resample object
+Generate Johnson-Neyman Figure from momo.resample object with percentile confience intervals
 }
 \examples{
 

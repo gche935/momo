@@ -2080,7 +2080,7 @@ momo.fun <- function(object, Sfunction="NULL") {
 ## ===== FUNCTION momo.JNplot to plot Johnson-Neyman Figure ===== ##
 #' Generate Johnson-Neyman Figure from momo.resample object
 #'
-#' Generate Johnson-Neyman Figure from momo.resample object
+#' Generate Johnson-Neyman Figure from momo.resample object with percentile confience intervals
 #'
 #' @param momoObject momo.resample object (output from momo.resample).
 #' @param min_z minimum values of moderator Z on the graph.

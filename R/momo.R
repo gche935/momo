@@ -2372,11 +2372,11 @@ sim_mplus <- function(mplus_output = "mplusresults.out", S=5) {
     for (i in 1:length(NEW)) {
       d <- c(d, which(estcoeff == estcoeff[NEW[i]])[1])
     }
-    d <- d + 2*sum(coef(my_model)[, "pval"] != 999)
-    names(d) <- names(NEW)
+    dd <- d + 2*sum(coef(my_model)[, "pval"] != 999)
+    names(dd) <- names(NEW)
     stdyx.estcoeff <- estcoeff
-    stdyx.estcoeff <- stdyx.estcoeff[d]
-    names(stdyx.estcoeff) <- names(d)
+    stdyx.estcoeff <- stdyx.estcoeff[dd]
+    names(stdyx.estcoeff) <- names(dd)
   } # end if stdyx
 
   estcoeff <- estcoeff[NEW]

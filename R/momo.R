@@ -2369,9 +2369,8 @@ sim_mplus <- function(mplus_output = "mplusresults.out", S=5) {
   for (i in 1:length(NEW)) {
     d <- c(d, which(estcoeff == estcoeff[NEW[i]])[1])
   }
-    if ("stdyx.standardized" %in% names(my_model$parameters) == "FALSE") {
-    stdyx.estcoeff <- matrix(nrow = 0, ncol = 0)
-  } else {
+  stdyx.estcoeff <- matrix(nrow = 0, ncol = 0)
+  if ("stdyx.standardized" %in% names(my_model$parameters)) {
     dd <- d + 2*sum(coef(my_model)[, "pval"] != 999)
     names(dd) <- names(NEW)
     stdyx.estcoeff <- estcoeff
@@ -2458,14 +2457,13 @@ read.boot_mplus <- function(mplus_output, boot.file) {
   for (i in 1:length(NEW)) {
     d <- c(d, which(estcoeff == estcoeff[NEW[i]])[1])
   }
-  if ("stdyx.standardized" %in% names(my_mplus$parameters) == "FALSE") {
-    stdyx.estcoeff <- matrix(nrow = 0, ncol = 0)
-  } else {
+  stdyx.estcoeff <- matrix(nrow = 0, ncol = 0)
+  if ("stdyx.standardized" %in% names(my_mplus$parameters)) {
     dd <- d + 2*sum(coef(my_mplus)[, "pval"] != 999)
     names(d) <- names(NEW)
     stdyx.estcoeff <- estcoeff
     stdyx.estcoeff <- stdyx.estcoeff[dd]
-    names(stdyx.estcoeff) <- names(dd)
+    names(stdyx.estcoeff) <- names(NEW)
   } # end if stdyx
 
   estcoeff <- estcoeff[NEW]

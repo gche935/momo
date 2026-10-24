@@ -4,278 +4,387 @@
 # Purpose: Monte Carlo simulation for moderated mediating  effects from modsem, lavaan & Mplus outputs #
 # Model: Allows 3-way interaction                                                                      #
 # Allows simulated function (Sfunction = "    "                                                        #
-# Version: Beta 0.1.1                                                                                  #
+# Version: Beta 0.1.2                                                                                  #
 # WARNING: This is a beta version. Please report all bugs to the author                                #
 ########################################################################################################
 
 ## == Required packages (load when loading momo) == ##
+#library(future)
+#library(modsemTools)
+#library(parallel)
+#library(doParallel)
+#library(tidyr)
+#library(dplyr)
 #library(MASS)
 #library(ggplot2)
-#library(tidyr)
 #library(MplusAutomation)
 
+options("width"=210)
+options(max.print=10000)
 
-## ====== Function "momo_modsem" Monte Carlo Simulation for Confidence Intervals of Moderated Mediation (modsem) ====== ##
-#' Monte Carlo Simulation for Confidence Intervals of Moderated Mediation (modsem)
+
+## ====== Function "momo.resample" Resampling labeled parameters from modsem or lavaan outputs ====== ##
+#' Resampling labeled parameters from modsem or lavaan outputs
 #'
-#' Generate confidence intervals of moderated-mediating effects from modsem results using Monte Carlo simulation.
+#' Generate resampled labeled parameters from modsem or lavaan outputs using Monte Carlo simulation or bootstrapping.
 #'
-#' \if{html}{
-#' \figure{Figure.png}{options: width="75\%" alt="Description of my figure"}
-#' }
-#' \if{latex}{
-#' \figure{Figure.pdf}{options: width=15cm}
-#' }
+#' @param object modsem or lavaan object (output from modsem or lavaan).
+#' @param S.no number of Monte Carlo simulated samples (in millions). For example, S.no=5 (default) generates 5,000,000 simulated samples.
+#' @param B.no number of bootstrapped samples (in thousands). For example, B.no=2 generates 2,000 bootstrapped samples. Default is 0, and a Monte Carlo simulation will be used.
+#' @param B.speed number of cores used in bootstrapping. slow: ncpus = 2; normal: ncpus = detectCores(logical=FALSE) - 2; fast: ncpus = detectCores() - 4
 #'
-#' @param object modsem object (output from modsem).
-#' @param Z name of moderate Z.
-#' @param W name of moderator W.
-#' @param a1 parameter name of a1 path (main effect).
-#' @param a2 parameter name of a2 path (main effect).
-#' @param a3 parameter name of a3 path (main effect).
-#' @param a4 parameter name of a4 path (main effect).
-#' @param z1 parameter name of z1 path (interaction effect).
-#' @param z2 parameter name of z2 path (interaction effect).
-#' @param z3 parameter name of z3 path (interaction effect).
-#' @param z4 parameter name of z4 path (interaction effect).
-#' @param w1 parameter name of w1 path (interaction effect).
-#' @param w2 parameter name of w2 path (interaction effect).
-#' @param w3 parameter name of w3 path (interaction effect).
-#' @param w4 parameter name of w4 path (interaction effect).
-#' @param zw1 parameter name of zw1 path (3-way interaction effect).
-#' @param zw2 parameter name of zw2 path (3-way interaction effect).
-#' @param zw3 parameter name of zw3 path (3-way interaction effect).
-#' @param zw4 parameter name of zw4 path (3-way interaction effect).
-#' @param R number of Monte Carlo simulation samples (in millions). For example, R=5 (default) generates 5,000,000 simulated samples.
-#'
-#' @return momo output for plotting Johnson-Neyman Figure.
+#' @return a matrix of resampled parameters, a vector of estimated parameters and a vector of standardized parameters.
 #' @export
 #' @examples
 #'
 #' ## -- Example -- ##
 #'
-#' # modsem object is "est_lms" & output momo object is mcObject
+#' # modsem object is "est_lms" & output object is mcObject
 #'
-#' mcObject <- momo_modsem(est_lms, a1="a1", a2="a2", a3="a3a", a1="z1", Z="Autonomy")
+#' mcObject <- momo.resample(est_lms, S.no=5)
 #'
-#'
-#' # Change 2-Way Figure Title and/or Axis Labels Afterwards
-#' p_int <- p_int + ggplot2::labs(title = "Replace with your Figure Title",
-#'                                   x = "Replace with your X-axis Label",
-#'                                   y = "Replace with your Y-axis Label")
-#'
-#' # Change Figure Legend Labels Afterwards
-#' p_int <- p_int + ggplot2::scale_color_manual(name = "Replace with your Legend Title",
-#'                                           values = c("line1" = "black", "line2" = "grey"),
-#'                                           labels = c("Z at mean - 1sd", "Z at mean + 1sd"))
-#'
-#' # Save the New Figure
-#' ggplot2::ggsave("New Standardized Interaction Figure.png", width = 22.86, height = 16.51, units = "cm")
 #'
 
-  momo_modsem <- function(object, Z="NA", W="NA",
-                   a1="NA", z1="NA", w1="NA", zw1="NA",
-                   a2="NA", z2="NA", w2="NA", zw2="NA",
-                   a3="NA", z3="NA", w3="NA", zw3="NA",
-                   a4="NA", z4="NA", w4="NA", zw4="NA",
-                   R=5) {
+momo.resample <- function(object, S.no=5, B.no=0, B.speed="normal") {
 
-  ## --- Initial Inputs for programming --- ##
+  object.class = "NULL"
+  if (isTRUE("modsem" %in% class(object))) {
+    object.class <- "modsem"
+  } else if (isTRUE("lavaan" %in% class(object))) {
+    object.class <- "lavaan"
+  }
+  if (object.class == "NULL") stop("object must be a modsem or lavaan object")
 
-#  object <- est_lms
-#  Z <- "Autonomy"          ## Specify moderator Z
-#  W <- "NA"
-#  a1 <- "a1"
-#  a2 <- "a2"
-#  a3 <- "a3a"
-#  a4 <- "NA"
-#  z1 <- "z1"
-#  z2 <- "NA"
-#  z3 <- "NA"
-#  z4 <- "NA"
-#  w1 <- "NA"
-#  w2 <- "NA"
-#  w3 <- "NA"
-#  w4 <- "NA"
-#  zw1 <- "NA"
-#  zw2 <- "NA"
-#  zw3 <- "NA"
-#  zw4 <- "NA"
+  match.arg(B.speed, c("slow", "normal", "fast"))
 
-#  R <- 1 # Number of simulated samples = R*1e6 (default: R = 5)
-  ## ------------------------------- ##
+  if (object.class == "modsem" & B.no != 0) {
+    resample.object <- boot_modsem(object, B.no, B.speed)
+  } else if (object.class == "modsem" & B.no == 0) {
+    resample.object <- sim_modsem(object, S.no)
+  } else if (object.class == "lavaan" & B.no != 0) {
+    resample.object <- boot_lavaan(object, B.no, B.speed)
+  } else if (object.class == "lavaan" & B.no == 0) {
+    resample.object <- sim_lavaan(object, S.no)
+  } # end if
+
+  ## ------------------------------ ##
+
+  return(resample.object)
+
+}  ## end (Function "momo.resample") ##
 
 
-  ## -- Extract defined parameters and vcov -- ##
-  varZ <- "NA"
-  varW <- "NA"
-  if (Z != "NA") varZ <- paste0(Z, "~~", Z)
-  if (W != "NA") varW <- paste0(W, "~~", W)
-  dp <- c(a1, a2, a3, a4, z1, z2, z3, z4, w1, w2, w3, w4, zw1, zw2, zw3, zw4, varZ, varW)
-  dp <- dp[dp != "NA"]
 
-  if (is(object) == "modsem_pi") {
-    XISETAS <- paste(unlist(object$elementsInProdNames), collapse = " ")
-    split_elements <- unlist(strsplit(XISETAS, split = " "))
-    XISETAS <- unique(split_elements)
-  } else {
-    XISETAS <- c(object$model$models[[1]]$info$xis, object$model$models[[1]]$info$etas)
-  } # end if modsem_pi
-  varIV <- paste0(XISETAS, "~~", XISETAS)
 
-  dd <- modsem::parameter_estimates(object)
-  PAR <- dd[which(dd[,"label"] != ""),"label"]
-  PAR <- c(PAR, varIV)
+## ====== Function "sim_modsem" Monte Carlo Simulation for modsem parameters with labels ====== ##
+#' Monte Carlo Simulation for modsem parameters with labels
+#'
+#' Generate modsem parameters with labels using Monte Carlo simulation.
+#'
+#' @param object modsem object (output from modsem).
+#' @param S number of Monte Carlo simulation samples (in millions). For example, S=5 (default) generates 5,000,000 simulated samples.
+#'
+#' @return simulated parameters, estimated parameters and standardized parameters.
+#' @export
+#' @examples
+#'
+#' ## -- Example -- ##
+#'
+#' # modsem object is "est_lms" & output object is mcObject
+#'
+#' mcObject <- sim_modsem(est_lms, S=5)
+#'
+#'
+
+sim_modsem <- function(object, S=5) {
+
+  #  S <- 1 # Number of simulated samples = S*1e6 (default: S = 5)
+
+  ## -- Extract labeled parameters and vcov -- ##
+  par.est <- modsem::parameter_estimates(object)
+  PAR <- par.est[which(par.est[,"label"] != ""),"label"]
 
   temp <- modsem::modsem_coef(object)
   estcoeff <- temp[PAR]
   Temp3 <- modsem::modsem_vcov(object)
   Tech3 <- Temp3[PAR, PAR]
 
-  if (is(object) == "modsem_da") {
-    sfit <- standardize_model(object)
-    stdyx.temp <- modsem::modsem_coef(sfit)
-  } else {
-    dd <- modsem::standardized_estimates(object, correction=TRUE)
-    dd$names <- ifelse(dd$label == "", paste0(dd$lhs, dd$op, dd$rhs), dd$label)
-    stdyx.temp <- dd[, "est"]
-    names(stdyx.temp) <- dd$names
-  }
+  dd <- modsem::standardized_estimates(object, correction=TRUE)
+  dd$names <- ifelse(dd$label == "", paste0(dd$lhs, dd$op, dd$rhs), dd$label)
+  stdyx.temp <- dd[, "est"]
+  names(stdyx.temp) <- dd$names
   stdyx.estcoeff <- stdyx.temp[PAR]
 
-  return_momo <- momo(estcoeff, stdyx.estcoeff, Tech3,
-                        Z, W,
-                        varZ, varW,
-                        a1, z1, w1, zw1,
-                        a2, z2, w2, zw2,
-                        a3, z3, w3, zw3,
-                        a4, z4, w4, zw4,
-                        R=5)
+  ## -- Monte Carlo Simulation of S*1e6 samples, default: S = 5 -- ##
+  mcmc <- MASS::mvrnorm(n=S*1e6, mu=estcoeff, Sigma=Tech3, tol = 1e-6)
 
-  return(return_momo)
+  # -- Retain simulated samples with variance larger than or equal to 0 -- #
+  var.sim <- par.est[which(par.est[,"label"] != "" & par.est[,"op"] == "~~"), "label"]
+  if (length(var.sim) > 0) {
+    for (i in 1:length(var.sim)) {
+      mcmc <- mcmc[which(mcmc[, var.sim[i]] > 0), , drop = FALSE]
+    } # end for i
+  } # end if
+  b.no <- nrow(mcmc)
+  S.no <- format(S*1e6, scientific = FALSE)
 
-}  ## end (Function "momo_modsem") ##
+  # -- Print number of bootstrap samples -- #
+  cat("\n", "   Number of requested simulated samples = ", S.no)
+  cat("\n", "   Number of completed simulated samples = ", b.no, rep("\n",2))
+
+  ## ------------------------------ ##
+
+  return(list(mcmc, estcoeff, stdyx.estcoeff))
+
+}  ## end (Function "sim_modsem") ##
 
 
 
 
-## ====== Function "momo_lavaan" Monte Carlo Simulation for Confidence Intervals of Moderated Mediation (lavaan) ====== ##
-#' Monte Carlo Simulation for Confidence Intervals of Moderated Mediation (lavaan)
+## ====== Function "boot_modsem" Bootstrapping modsem parameters with labels ====== ##
+#' Bootstrapping modsem parameters with labels
 #'
-#' Generate confidence intervals of moderated-mediating effects from lavaan results using Monte Carlo simulation.
+#' Generate modsem parameters with labels using Bootstrapping.
 #'
-#' \if{html}{
-#' \figure{Figure.png}{options: width="75\%" alt="Description of my figure"}
-#' }
-#' \if{latex}{
-#' \figure{Figure.pdf}{options: width=15cm}
-#' }
+#' @param object modsem object (output from modsem).
+#' @param B number of bootstrapped samples (in thousands). For example, B=2 (default) generates 2,000 bootstrapped samples.
+#' @param speed number of cores used in bootstrapping. slow: ncpus = 2; normal: ncpus = detectCores(logical=FALSE) - 2; fast: ncpus = detectCores() - 4
 #'
-#' @param object lavaan object (output from lavaan).
-#' @param Z name of moderate Z.
-#' @param W name of moderator W.
-#' @param a1 parameter name of a1 path (main effect).
-#' @param a2 parameter name of a2 path (main effect).
-#' @param a3 parameter name of a3 path (main effect).
-#' @param a4 parameter name of a4 path (main effect).
-#' @param z1 parameter name of z1 path (interaction effect).
-#' @param z2 parameter name of z2 path (interaction effect).
-#' @param z3 parameter name of z3 path (interaction effect).
-#' @param z4 parameter name of z4 path (interaction effect).
-#' @param w1 parameter name of w1 path (interaction effect).
-#' @param w2 parameter name of w2 path (interaction effect).
-#' @param w3 parameter name of w3 path (interaction effect).
-#' @param w4 parameter name of w4 path (interaction effect).
-#' @param zw1 parameter name of zw1 path (3-way interaction effect).
-#' @param zw2 parameter name of zw2 path (3-way interaction effect).
-#' @param zw3 parameter name of zw3 path (3-way interaction effect).
-#' @param zw4 parameter name of zw4 path (3-way interaction effect).
-#' @param R number of Monte Carlo simulation samples (in millions). For example, R=5 (default) generates 5,000,000 simulated samples.
-#'
-#' @return momo output for plotting Johnson-Neyman Figure.
+#' @return bootstrapped parameters, estimated parameters and standardized parameters.
 #' @export
 #' @examples
 #'
 #' ## -- Example -- ##
 #'
-#' # lavaan object is "est_lms" & output momo object is mcObject
+#' # modsem object is "est_lms" & output object is mcObject
 #'
-#' mcObject <- momo_lavaan(est_lms, a1="a1", a2="a2", a3="a3a", a1="z1", Z="Autonomy")
+#' mcObject <- boot_modsem(est_lms, B = 2, speed="normal")
 #'
-#'
-#' # Change 2-Way Figure Title and/or Axis Labels Afterwards
-#' p_int <- p_int + ggplot2::labs(title = "Replace with your Figure Title",
-#'                                   x = "Replace with your X-axis Label",
-#'                                   y = "Replace with your Y-axis Label")
-#'
-#' # Change Figure Legend Labels Afterwards
-#' p_int <- p_int + ggplot2::scale_color_manual(name = "Replace with your Legend Title",
-#'                                           values = c("line1" = "black", "line2" = "grey"),
-#'                                           labels = c("Z at mean - 1sd", "Z at mean + 1sd"))
-#'
-#' # Save the New Figure
-#' ggplot2::ggsave("New Standardized Interaction Figure.png", width = 22.86, height = 16.51, units = "cm")
 #'
 
-  momo_lavaan <- function(object, Z="NA", W="NA",
-                   a1="NA", z1="NA", w1="NA", zw1="NA",
-                   a2="NA", z2="NA", w2="NA", zw2="NA",
-                   a3="NA", z3="NA", w3="NA", zw3="NA",
-                   a4="NA", z4="NA", w4="NA", zw4="NA",
-                   R=5) {
+boot_modsem <- function(object, B = 2, speed="normal") {
 
-  ## --- Initial Inputs for programming --- ##
+  #  B <- 1 # Number of bootstrapped samples = B*1000 (default: B = 2)
+  B.no <- B*1000
 
-#  R <- 1 # Number of simulated samples = R*1e6 (default: R = 5)
-  ## ------------------------------- ##
+  ## -- Extract labeled parameters -- ##
+  par.est <- modsem::parameter_estimates(object)
+  PAR <- par.est[which(par.est[,"label"] != ""),"label"]
 
-  ## -- Extract defined parameters and vcov -- ##
-  varZ <- "NA"
-  varW <- "NA"
-  if (Z != "NA") varZ <- paste0(Z, "~~", Z)
-  if (W != "NA") varW <- paste0(W, "~~", W)
-  dp <- c(a1, a2, a3, a4, z1, z2, z3, z4, w1, w2, w3, w4, zw1, zw2, zw3, zw4, varZ, varW)
-  dp <- dp[dp != "NA"]
+  temp <- modsem::modsem_coef(object)
+  estcoeff <- temp[PAR]
 
-  IVvar <- lavNames(object, "eqs.x")
-  varIV <- paste0(IVvar, "~~", IVvar)
+  dd <- modsem::standardized_estimates(object, correction=TRUE)
+  dd$names <- ifelse(dd$label == "", paste0(dd$lhs, dd$op, dd$rhs), dd$label)
+  stdyx.temp <- dd[, "est"]
+  names(stdyx.temp) <- dd$names
+  stdyx.estcoeff <- stdyx.temp[PAR]
 
-  dd <- lavaan::parameterEstimates(object, standardized=TRUE, remove.nonfree=TRUE, remove.def=TRUE)
-  PAR <- dd[which(dd[,"label"] != ""),"label"]
-  if (Z != "NA" | W != "NA") {
-    PAR <- c(PAR, varIV)
-  } # end if Z
+
+  data <- object$model$models[[1]]$data.raw
+  args.method <- object$method
+  args.rcs <- ifelse(any(grepl("composite_", par.est$rhs) == TRUE), TRUE, FALSE)
+  parTable <- object$model$parTable
+  for (j in 1: nrow(parTable)) {
+    if (parTable[j, "mod"] == "") {
+      parTable[j, "syntax"] = paste(parTable[j,"lhs"], parTable[j,"op"], parTable[j,"rhs"])
+    } else {
+      parTable[j, "syntax"] = paste(parTable[j,"lhs"], parTable[j,"op"], parTable[j,"mod"], "*", parTable[j,"rhs"])
+    }
+  }
+  args.model <- paste(parTable[,"syntax"], collapse = "\n")
+
+
+  ## -- Bootstrap B*1000 samples, default: B = 2 -- ##
+  if (speed == "slow") {
+    cl = 2
+  } else if (speed == "normal") {
+    cl = detectCores(logical=FALSE) - 2
+  } else if (speed == "fast") {
+    cl = detectCores() - 4
+  }
+  plan(multisession, workers=cl)
+  mcmc <- suppressWarnings(bootstrap_parallel(model = modsem, model.syntax = args.model, data = data,
+                                              method = object$method, rcs = args.rcs, max.step=50, FUN = "coef", R = B.no))
+  plan(sequential)
+
+  # -- Retain simulated samples with variance larger than or equal to 0 -- #
+  var.sim <- par.est[which(par.est[,"label"] != "" & par.est[,"op"] == "~~"), "label"]
+  if (length(var.sim) > 0) {
+    for (i in 1:length(var.sim)) {
+      mcmc <- mcmc[which(mcmc[, var.sim[i]] > 0), , drop = FALSE]
+    } # end for i
+  } # end if
+  b.no <- nrow(mcmc)
+
+  mcmc <- mcmc[,PAR]
+
+  # -- Print number of bootstrap samples -- #
+  cat("\n", "   Number of requested bootstrap samples = ", B.no)
+  cat("\n", "   Number of completed bootstrap samples = ", b.no, rep("\n",2))
+
+  ## ------------------------------ ##
+
+  invisible(list(mcmc, estcoeff, stdyx.estcoeff))
+
+}  ## end (Function "boot_modsem") ##
+
+
+
+
+## ====== Function "sim_lavaan" Monte Carlo Simulation for lavaan parameters with labels ====== ##
+#' Monte Carlo Simulation for lavaan parameters with labels
+#'
+#' Generate lavaan parameters with labels using Monte Carlo simulation.
+#'
+#' @param object lavaan object (output from lavaan).
+#' @param S number of Monte Carlo simulation samples (in millions). For example, S=5 (default) generates 5,000,000 simulated samples.
+#'
+#' @return simulated parameters, estimated parameters and standardized parameters.
+#' @export
+#' @examples
+#'
+#' ## -- Example -- ##
+#'
+#' # lavaan object is "est_lavaan" & output object is mcObject
+#'
+#' mcObject <- sim_lavaan(est_lavaan, S=5)
+#'
+#'
+
+sim_lavaan <- function(object, S=5) {
+
+  #  S <- 1 # Number of simulated samples = S*1e6 (default: S = 5)
+
+  ## -- Extract labeled parameters and vcov -- ##
+  par.est <- lavaan::parameterEstimates(object, standardized=TRUE, remove.nonfree=TRUE, remove.def=TRUE)
+  PAR <- par.est[which(par.est[,"label"] != ""),"label"]
 
   temp <- lavaan::coef(object)
   estcoeff <- temp[PAR]
   Temp3 <- lavaan::vcov(object)
   Tech3 <- Temp3[PAR, PAR]
 
-  stdyx.temp <- dd[, "std.all"]
-  names(stdyx.temp) <- names(temp)
+  stdyx.temp <- par.est[, "std.all"]
+  names(stdyx.temp) <- par.est[, "label"]
   stdyx.estcoeff <- stdyx.temp[PAR]
 
-  return_momo <- momo(estcoeff, stdyx.estcoeff, Tech3,
-                        Z, W,
-                        varZ, varW,
-                        a1, z1, w1, zw1,
-                        a2, z2, w2, zw2,
-                        a3, z3, w3, zw3,
-                        a4, z4, w4, zw4,
-                        R=5)
+  ## -- Monte Carlo Simulation of S*1e6 samples, default: S = 5 -- ##
+  mcmc <- MASS::mvrnorm(n=S*1e6, mu=estcoeff, Sigma=Tech3, tol = 1e-6)
 
-  return(return_momo)
+  # -- Retain simulated samples with variance larger than or equal to 0 -- #
+  var.sim <- par.est[which(par.est[,"label"] != "" & par.est[,"op"] == "~~"), "label"]
+  if (length(var.sim) > 0) {
+    for (i in 1:length(var.sim)) {
+      mcmc <- mcmc[which(mcmc[, var.sim[i]] > 0), , drop = FALSE]
+    } # end for i
+  } # end if
+  b.no <- nrow(mcmc)
+  S.no <- format(S*1e6, scientific = FALSE)
 
-}  ## end (Function "momo_lavaan") ##
+  # -- Print number of bootstrap samples -- #
+  cat("\n", "   Number of requested simulated samples = ", S.no)
+  cat("\n", "   Number of completed simulated samples = ", b.no, rep("\n",2))
+
+  ## ------------------------------ ##
+
+  return(list(mcmc, estcoeff, stdyx.estcoeff))
+
+}  ## end (Function "sim_lavaan") ##
 
 
 
 
-
-## ====== Function "momo_mplus" Monte Carlo Confidence Intervals for Moderated Mediation (mplus) ====== ##
-#' Monte Carlo Simulation for Confidence Intervals of Moderated Mediation (mplus)
+## ====== Function "boot_lavaan" Bootstrapping lavaan parameters with labels ====== ##
+#' Bootstrapping lavaan parameters with labels
 #'
-#' Generate confidence intervals of moderated-mediating effects from modsem results using Monte Carlo simulation.
+#' Generate lavaan parameters with labels using Bootstrapping.
+#'
+#' @param object lavaan object (output from lavaan).
+#' @param B number of bootstrapped samples (in thousands). For example, B=2 (default) generates 2,000 bootstrapped samples.
+#' @param speed number of cores used in bootstrapping. slow: ncpus = 2; normal: ncpus = detectCores(logical=FALSE) - 2; fast: ncpus = detectCores() - 4
+#'
+#' @return bootstrapped parameters, estimated parameters and standardized parameters.
+#' @export
+#' @examples
+#'
+#' ## -- Example -- ##
+#'
+#' # lavaan object is "est_lavaan" & output object is mcObject
+#'
+#' mcObject <- boot_lavaan(est_lavaan, B = 2, speed="normal")
+#'
+#'
+
+boot_lavaan <- function(object, B = 2, speed="normal") {
+
+  #  B <- 1 # Number of bootstrapped samples = B*1000 (default: B = 2)
+  B.no <- B*1000
+
+  ## -- Extract labeled parameters -- ##
+  par.est <- lavaan::parameterEstimates(object, standardized=TRUE, remove.nonfree=TRUE, remove.def=TRUE)
+  PAR <- par.est[which(par.est[,"label"] != ""),"label"]
+
+  temp <- lavaan::coef(object)
+  estcoeff <- temp[PAR]
+
+  stdyx.temp <- par.est[, "std.all"]
+  names(stdyx.temp) <- par.est[, "label"]
+  stdyx.estcoeff <- stdyx.temp[PAR]
+
+  # ===== Bootstrapping ===== #
+
+  #  args.model <- eval(object@call$model)
+  #  args.data <- eval(object@call$data)
+  #  args.cluster <- lavInspect(object, "cluster")
+
+  if (.Platform$OS.type == "windows") {
+    if (speed == "slow") {
+      mcmc <- bootstrapLavaan(object, R = B.no, type = "ordinary", FUN = coef, parallel = "snow", ncpus = 2L)
+    } else if (speed == "normal") {
+      mcmc <- bootstrapLavaan(object, R = B.no, type = "ordinary", FUN = coef,
+                              parallel="snow", ncpus = max(2L, parallel::detectCores(logical=FALSE) - 2L, na.rm = TRUE))
+    } else if (speed == "fast") {
+      mcmc <- bootstrapLavaan(object, R = B.no, type = "ordinary", FUN = coef,
+                              parallel="snow", ncpus = max(2L, parallel::detectCores() - 4L, na.rm = TRUE))
+    } # end if speed
+  } else { #macOS
+    if (speed == "slow") {
+      mcmc <- bootstrapLavaan(object, R = B.no, type = "ordinary", FUN = coef, parallel = "multicore", ncpus = 2L)
+    } else if (speed == "normal") {
+      mcmc <- bootstrapLavaan(object, R = B.no, type = "ordinary", FUN = coef,
+                              parallel="multicore", ncpus = max(2L, parallel::detectCores(logical=FALSE) - 2L, na.rm = TRUE))
+    } else if (speed == "fast") {
+      mcmc <- bootstrapLavaan(object, R = B.no, type = "ordinary", FUN = coef,
+                              parallel="multicore", ncpus = max(2L, parallel::detectCores() - 4L, na.rm = TRUE))
+    } # end if speed
+  }
+
+  xx <- attr(mcmc, "nonadmissible")
+  if (length(xx) != 0) {
+    mcmc <- mcmc[-xx,]
+  }
+  mcmc <- mcmc[complete.cases(mcmc), , drop = FALSE]
+  b.no <- nrow(mcmc)
+  mcmc <- mcmc[,PAR]
+
+  # -- Print number of bootstrap samples -- #
+  cat("\n", "   Number of requested bootstrap samples = ", B.no)
+  cat("\n", "   Number of completed bootstrap samples = ", b.no, rep("\n",2))
+
+  ## ------------------------------ ##
+
+  invisible(list(mcmc, estcoeff, stdyx.estcoeff))
+
+}  ## end (Function "boot_lavaan") ##
+
+
+
+
+## ====== Sub-Function "momo.ci" for Creating Confidence Intervals for Moderated Mediation ====== ##
+#' Generate Confidence Intervals of Moderated Mediation from momo.resample object
+#'
+#' Generate confidence intervals of moderated-mediating effects from momo.resample object.
 #'
 #' \if{html}{
 #' \figure{Figure.png}{options: width="75\%" alt="Description of my figure"}
@@ -284,9 +393,11 @@
 #' \figure{Figure.pdf}{options: width=15cm}
 #' }
 #'
-#' @param mplus_output_file Mplus output (.out) file (output from Mplus).
+#' @param mcmc.object momo.resample object (output from momo.resample).
 #' @param Z name of moderate Z.
 #' @param W name of moderator W.
+#' @param varZ parameter name of variance of moderator Z.
+#' @param varW parameter name of variance of moderator W.
 #' @param a1 parameter name of a1 path (main effect).
 #' @param a2 parameter name of a2 path (main effect).
 #' @param a3 parameter name of a3 path (main effect).
@@ -303,19 +414,16 @@
 #' @param zw2 parameter name of zw2 path (3-way interaction effect).
 #' @param zw3 parameter name of zw3 path (3-way interaction effect).
 #' @param zw4 parameter name of zw4 path (3-way interaction effect).
-#' @param R number of Monte Carlo simulation samples (in millions). For example, R=5 (default) generates 5,000,000 simulated samples.
 #'
-#' @return momo output for plotting Johnson-Neyman Figure.
+#' @return momo.ci output for plotting Johnson-Neyman Figure.
 #' @export
 #' @examples
 #'
 #' ## -- Example -- ##
 #'
-#' # mplus_output_file is "mplusresults.out" & moderator Z is "AUTO"
-#' # output mccimm object is mcObject
+#' # momo.resample object is mcObject & output momo.ci object is momoObject
 #'
-#' mcObject <- momo_mplus("mplusresults.out", Z = "AUTO",
-#'             a1 = "a1", a2 = "a2", z1 = "z1")
+#' momoObject <- momo.ci(mcObject, a1="a1", a2="a2", a3="a3a", z1="z1", Z="Autonomy", varZ="varAut")
 #'
 #'
 #' # Change 2-Way Figure Title and/or Axis Labels Afterwards
@@ -332,141 +440,19 @@
 #' ggplot2::ggsave("New Standardized Interaction Figure.png", width = 22.86, height = 16.51, units = "cm")
 #'
 
-momo_mplus <- function(mplus_output_file = "mplusresults.out",
-                   Z="NA", W="NA",
-                   a1="NA", a2="NA", a3="NA", a4="NA",
-                   z1="NA", z2="NA", z3="NA", z4="NA",
-                   w1="NA", w2="NA", w3="NA", w4="NA",
-                   zw1="NA", zw2="NA", zw3="NA", zw4="NA",
-                   R=5) {
 
-  ## ------------------------------- ##
+momo.ci <- function(mcmc.object,
+                    Z="NA", W="NA",
+                    varZ="NA", varW="NA",
+                    a1="NA", z1="NA", w1="NA", zw1="NA",
+                    a2="NA", z2="NA", w2="NA", zw2="NA",
+                    a3="NA", z3="NA", w3="NA", zw3="NA",
+                    a4="NA", z4="NA", w4="NA", zw4="NA") {
 
-  ## -- Convert arguments to upper case -- ##
-  Z <- toupper(Z)
-  W <- toupper(W)
-  a1 <- toupper(a1)
-  a2 <- toupper(a2)
-  a3 <- toupper(a3)
-  a4 <- toupper(a4)
-  z1 <- toupper(z1)
-  z2 <- toupper(z2)
-  z3 <- toupper(z3)
-  z4 <- toupper(z4)
-  w1 <- toupper(w1)
-  w2 <- toupper(w2)
-  w3 <- toupper(w3)
-  w4 <- toupper(w4)
-  zw1 <- toupper(zw1)
-  zw2 <- toupper(zw2)
-  zw3 <- toupper(zw3)
-  zw4 <- toupper(zw4)
-
-  ## -- Extract defined parameters and vcov -- ##
-  varZ <- "NA"
-  varW <- "NA"
-  Z <- toupper(Z)
-  W <- toupper(W)
-  if (Z != "NA") varZ <- paste0(Z, "~~", Z)
-  if (W != "NA") varW <- paste0(W, "~~", W)
-  dp <- c(a1, a2, a3, a4, z1, z2, z3, z4, w1, w2, w3, w4, zw1, zw2, zw3, zw4, varZ, varW)
-  dp[1:(length(dp) - 2)] <- toupper(dp[1:(length(dp) - 2)])
-  dp <- dp[dp != "NA"]
-
-  my_model <- readModels(mplus_output_file)
-  VAR.LIST <- my_model$parameters$unstandardized[which(my_model$parameters$unstandardized$paramHeader == "Variances"), "param"]
-  VAR.L1 <- vector()
-  VAR.L2 <- vector()
-
-  if ("BetweenWithin" %in% colnames(my_model$parameters$unstandardized) == TRUE) {
-    if (length(diag(my_model$tech1$parameterSpecification$WITHIN$psi)[VAR.LIST]) != 0) {
-      VAR.L1 <- diag(my_model$tech1$parameterSpecification$WITHIN$psi)[VAR.LIST]
-      names(VAR.L1) <- paste0(names(VAR.L1), ".WITHIN~~", names(VAR.L1), ".WITHIN")
-    }
-    if (length(diag(my_model$tech1$parameterSpecification$BETWEEN$psi)[VAR.LIST]) != 0) {
-      VAR.L2 <- diag(my_model$tech1$parameterSpecification$BETWEEN$psi)[VAR.LIST]
-      names(VAR.L2) <- paste0(names(VAR.L2), ".BETWEEN~~", names(VAR.L2), ".BETWEEN")
-    }
-    VAR <- c(VAR.L1, VAR.L2)
-  } else {
-    VAR <- diag(my_model$tech1$parameterSpecification$X$psi)[VAR.LIST]
-    names(VAR) <- paste0(names(VAR), "~~", names(VAR))
-  } # end Between/Within
-
-  NEW <- my_model$tech1$parameterSpecification$THE.ADDITIONAL.PARAMETERS$new_additional
-  names(NEW) <- colnames(NEW)
-  dpp <- c(VAR, NEW)
-  dpp <- sort(dpp)
-
-  Tech3 <- my_model$tech3$paramCov
-  Tech3[upper.tri(Tech3)] <- t(Tech3)[upper.tri(Tech3)]
-  no.Tech1 <- nrow(Tech3)
-  Tech3 <- Tech3[dpp, dpp]
-  colnames(Tech3) <- names(dpp)
-  rownames(Tech3) <- names(dpp)
-
-  estcoeff <- scan(gsub('"', '', my_model$input$savedata$results), sep = "", what = numeric())
-
-  if ("stdyx.standardized" %in% names(my_model$parameters) == "FALSE") {
-    stdyx.estcoeff <- matrix(nrow = 0, ncol = 0)
-  } else {
-    d <- vector()
-    for (i in 1:length(NEW)) {
-      d <- c(d, which(estcoeff == estcoeff[NEW[i]])[1])
-    }
-    d <- d + 2*no.Tech1
-    names(d) <- names(NEW)
-    stdyx.estcoeff <- scan("Model_CC4.txt", sep = "", what = numeric())
-    stdyx.estcoeff <- stdyx.estcoeff[d]
-    names(stdyx.estcoeff) <- names(d)
-  } # end if stdyx
-
-  estcoeff <- estcoeff[dpp]
-  names(estcoeff) <- names(dpp)
-
-
-  return_momo <- momo(estcoeff, stdyx.estcoeff, Tech3,
-                        Z, W,
-                        varZ, varW,
-                        a1, z1, w1, zw1,
-                        a2, z2, w2, zw2,
-                        a3, z3, w3, zw3,
-                        a4, z4, w4, zw4,
-                        R=5)
-
-  return(return_momo)
-
-}  ## end (Function "momo_mplus") ##
-
-
-
-
-
-## ====== Sub-Function "momo" Monte Carlo Confidence Intervals for Moderated Mediation ====== ##
-
-momo <- function(estcoeff, stdyx.estcoeff, Tech3,
-                   Z="NA", W="NA",
-                   varZ="NA", varW="NA",
-                   a1="NA", z1="NA", w1="NA", zw1="NA",
-                   a2="NA", z2="NA", w2="NA", zw2="NA",
-                   a3="NA", z3="NA", w3="NA", zw3="NA",
-                   a4="NA", z4="NA", w4="NA", zw4="NA",
-                   R=5) {
-
-
-  ## -- Monte Carlo Simulation of R*1e6 samples, default: R = 5 -- ##
-  mcmc <- MASS::mvrnorm(n=R*1e6, mu=estcoeff, Sigma=Tech3, tol = 1e-6)
-
-  varZ <- "NA"
-  varW <- "NA"
-  if (Z != "NA") varZ <- paste0(Z, "~~", Z)
-  if (W != "NA") varW <- paste0(W, "~~", W)
-  dp <- c(a1, a2, a3, a4, z1, z2, z3, z4, w1, w2, w3, w4, zw1, zw2, zw3, zw4, varZ, varW)
-  dp <- dp[dp != "NA"]
-  estcoeff <- estcoeff[dp]
-  stdyx.estcoeff <- stdyx.estcoeff[dp]
-  mcmc <- mcmc[, dp]
-
+  mcmc <- mcmc.object[[1]]
+  estcoeff <- mcmc.object[[2]]
+  stdyx.estcoeff <- mcmc.object[[3]]
+  b.no <- nrow(mcmc)
 
   ## -- Number of Moderating Effects -- ##
   NoModz <- 0
@@ -494,28 +480,6 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
     if (w3 != "NA") PoMod <- 3
     if (w4 != "NA") PoMod <- 4
   } # end (if (NoMod == 1))
-  ## ------------------------------ ##
-
-
-  # -- Retain simulated samples with variance larger than or equal to 0 -- #
-  if (NoMod == 1) {
-    if (NoModz != 0){
-      mcmc <- mcmc[which(mcmc[, varZ] >= 0),]
-    } else {
-      mcmc <- mcmc[which(mcmc[, varW] >= 0),]
-    }
-  } else if (NoMod == 2) {
-    mcmc <- mcmc[which(mcmc[, varZ] >= 0),]
-    mcmc <- mcmc[which(mcmc[, varW] >= 0),]
-  } # end (if NoMod)
-
-  b.no <- nrow(mcmc)
-  R.no <- format(R*1e6, scientific = FALSE)
-
-  # -- Print number of bootstrap samples -- #
-  cat("\n", "   Number of requested simulated samples = ", R.no)
-  cat("\n", "   Number of completed simulated samples = ", b.no, rep("\n",2))
-
   ## ------------------------------ ##
 
 
@@ -630,7 +594,7 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
     #### Percentile Confidence Intervals of Conditional Indirect Effects ####
 
     PCI <- matrix(1:8, nrow = 1, dimnames = list(c("        "),
-                                             c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+                                                 c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
 
     PCI[1,1] <- format(round(quantile(abM,c(0.005)), digits = 4), nsmall = 4, scientific = FALSE)
     PCI[1,2] <- format(round(quantile(abM,c(0.025)), digits = 4), nsmall = 4, scientific = FALSE)
@@ -656,7 +620,7 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
 
     #### Bias-Corrected Confidence Intervals ####
     BCCI <- matrix(1:8, nrow = 1, dimnames = list(c("        "),
-                                              c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+                                                  c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
 
     BCCI[1,1] <- format(round(quantile(abM,probs=pnorm(2*zM+qnorm(0.005))), digits = 4), nsmall = 4, scientific = FALSE)
     BCCI[1,2] <- format(round(quantile(abM,probs=pnorm(2*zM+qnorm(0.025))), digits = 4), nsmall = 4, scientific = FALSE)
@@ -737,9 +701,9 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
     #### Percentile and Bias-Corrected Confidence Intervals of Conditional Indirect Effects ####
 
     PCI <- matrix(1:48, nrow = 6, dimnames = list(c("Mean-2sd","Mean-1sd","Mean","Mean+1sd","Mean+2sd","Index MM"),
-                                              c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+                                                  c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
     BCCI <- matrix(1:48, nrow = 6, dimnames = list(c("Mean-2sd","Mean-1sd","Mean","Mean+1sd","Mean+2sd","Index MM"),
-                                               c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+                                                   c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
 
     for (X in 1:5) {
       level <- X - 3
@@ -830,13 +794,13 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
     #### Percentile and Bias-Corrected Confidence Intervals for Simple Slopes Tests ####
 
     PCI.SST <- matrix(1:24, nrow = 3, dimnames = list(c("Mean-1sd", "Mean+1sd","Difference"),
-                                              c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+                                                      c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
     BCCI.SST <- matrix(1:24, nrow = 3, dimnames = list(c("Mean-1sd","Mean+1sd","Difference"),
-                                               c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+                                                       c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
 
     estSST <- as.numeric(PCI[4,4]) - as.numeric(PCI[2,4])
     abSST <- (U7XSa1+U7XSz1*SstdZ)*(U7XSa2+U7XSz2*SstdZ)*(U7XSa3+U7XSz3*SstdZ)*(U7XSa4+U7XSz4*SstdZ) -
-             (U7XSa1-U7XSz1*SstdZ)*(U7XSa2-U7XSz2*SstdZ)*(U7XSa3-U7XSz3*SstdZ)*(U7XSa4-U7XSz4*SstdZ)
+      (U7XSa1-U7XSz1*SstdZ)*(U7XSa2-U7XSz2*SstdZ)*(U7XSa3-U7XSz3*SstdZ)*(U7XSa4-U7XSz4*SstdZ)
     zSST = qnorm(sum(abSST<estSST)/b.no)  # Bias-Corrected Factor
 
     ## Percentile Confidence Intervals ##
@@ -955,9 +919,9 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
     #### Percentile and Bias-Corrected Confidence Intervals of Conditional Indirect Effects ####
 
     PCI <- matrix(1:48, nrow = 6, dimnames = list(c("Mean-2sd","Mean-1sd","Mean","Mean+1sd","Mean+2sd","Index MM"),
-                                              c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+                                                  c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
     BCCI <- matrix(1:48, nrow = 6, dimnames = list(c("Mean-2sd","Mean-1sd","Mean","Mean+1sd","Mean+2sd","Index MM"),
-                                               c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+                                                   c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
 
     for (X in 1:5) {
       level <- X - 3
@@ -1050,13 +1014,13 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
     #### Percentile and Bias-Corrected Confidence Intervals for Simple Slopes Tests ####
 
     PCI.SST <- matrix(1:24, nrow = 3, dimnames = list(c("Mean-1sd", "Mean+1sd","Difference"),
-                                              c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+                                                      c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
     BCCI.SST <- matrix(1:24, nrow = 3, dimnames = list(c("Mean-1sd","Mean+1sd","Difference"),
-                                               c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+                                                       c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
 
     estSST <- as.numeric(PCI[4,4]) - as.numeric(PCI[2,4])
     abSST <- (U7XSa1+U7XSw1*SstdW)*(U7XSa2+U7XSw2*SstdW)*(U7XSa3+U7XSw3*SstdW)*(U7XSa4+U7XSw4*SstdW) -
-             (U7XSa1-U7XSw1*SstdW)*(U7XSa2-U7XSw2*SstdW)*(U7XSa3-U7XSw3*SstdW)*(U7XSa4-U7XSw4*SstdW)
+      (U7XSa1-U7XSw1*SstdW)*(U7XSa2-U7XSw2*SstdW)*(U7XSa3-U7XSw3*SstdW)*(U7XSa4-U7XSw4*SstdW)
     zSST = qnorm(sum(abSST<estSST)/b.no)  # Bias-Corrected Factor
 
     ## Percentile Confidence Intervals ##
@@ -1162,9 +1126,9 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
     #### Percentile and Bias-Corrected Confidence Intervals of Conditional Indirect Effects ####
 
     PCI <- matrix(1:40, nrow = 5, dimnames = list(c("Mean-2sd","Mean-1sd","Mean","Mean+1sd","Mean+2sd","Index MM"),
-                                              c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+                                                  c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
     BCCI <- matrix(1:40, nrow = 5, dimnames = list(c("Mean-2sd","Mean-1sd","Mean","Mean+1sd","Mean+2sd","Index MM"),
-                                               c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+                                                   c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
 
     for (X in 1:5) {
       level <- X - 3
@@ -1223,13 +1187,13 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
     #### Percentile and Bias-Corrected Confidence Intervals for Simple Slopes Tests ####
 
     PCI.SST <- matrix(1:24, nrow = 3, dimnames = list(c("Mean-1sd", "Mean+1sd","Difference"),
-                                              c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+                                                      c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
     BCCI.SST <- matrix(1:24, nrow = 3, dimnames = list(c("Mean-1sd","Mean+1sd","Difference"),
-                                               c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+                                                       c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
 
     estSST <- as.numeric(PCI[4,4]) - as.numeric(PCI[2,4])
     abSST <- (U7XSa1+U7XSz1*SstdZ)*(U7XSa2+U7XSz2*SstdZ)*(U7XSa3+U7XSz3*SstdZ)*(U7XSa4+U7XSz4*SstdZ) -
-             (U7XSa1-U7XSz1*SstdZ)*(U7XSa2-U7XSz2*SstdZ)*(U7XSa3-U7XSz3*SstdZ)*(U7XSa4-U7XSz4*SstdZ)
+      (U7XSa1-U7XSz1*SstdZ)*(U7XSa2-U7XSz2*SstdZ)*(U7XSa3-U7XSz3*SstdZ)*(U7XSa4-U7XSz4*SstdZ)
     zSST = qnorm(sum(abSST<estSST)/b.no)  # Bias-Corrected Factor
 
     ## Percentile Confidence Intervals ##
@@ -1336,9 +1300,9 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
     #### Percentile and Bias-Corrected Confidence Intervals of Conditional Indirect Effects ####
 
     PCI <- matrix(1:40, nrow = 5, dimnames = list(c("Mean-2sd","Mean-1sd","Mean","Mean+1sd","Mean+2sd"),
-                                              c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+                                                  c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
     BCCI <- matrix(1:40, nrow = 5, dimnames = list(c("Mean-2sd","Mean-1sd","Mean","Mean+1sd","Mean+2sd"),
-                                              c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+                                                   c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
 
     for (X in 1:5) {
       level <- X - 3
@@ -1397,13 +1361,13 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
     #### Percentile and Bias-Corrected Confidence Intervals for Simple Slopes Tests ####
 
     PCI.SST <- matrix(1:24, nrow = 3, dimnames = list(c("Mean-1sd", "Mean+1sd","Difference"),
-                                              c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+                                                      c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
     BCCI.SST <- matrix(1:24, nrow = 3, dimnames = list(c("Mean-1sd","Mean+1sd","Difference"),
-                                               c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+                                                       c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
 
     estSST <- as.numeric(PCI[4,4]) - as.numeric(PCI[2,4])
     abSST <- (U7XSa1+U7XSw1*SstdW)*(U7XSa2+U7XSw2*SstdW)*(U7XSa3+U7XSw3*SstdW)*(U7XSa4+U7XSw4*SstdW) -
-             (U7XSa1-U7XSw1*SstdW)*(U7XSa2-U7XSw2*SstdW)*(U7XSa3-U7XSw3*SstdW)*(U7XSa4-U7XSw4*SstdW)
+      (U7XSa1-U7XSw1*SstdW)*(U7XSa2-U7XSw2*SstdW)*(U7XSa3-U7XSw3*SstdW)*(U7XSa4-U7XSw4*SstdW)
     zSST = qnorm(sum(abSST<estSST)/b.no)  # Bias-Corrected Factor
 
     ## Percentile Confidence Intervals ##
@@ -1485,7 +1449,7 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
   ## --- More Than One Moderating Effect for Z & W --- ##
   if ((NoMod > 1) & (NoModz != 0) & (NoModw != 0)) {
 
-  # Define estimated parameters for calculating indirect effects
+    # Define estimated parameters for calculating indirect effects
     if (any(names(estcoeff) %in% a1)) U7Xa1 <- estcoeff[a1]
     if (any(names(estcoeff) %in% a2)) U7Xa2 <- estcoeff[a2]
     if (any(names(estcoeff) %in% a3)) U7Xa3 <- estcoeff[a3]
@@ -1506,7 +1470,7 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
     stdW <- sqrt(estcoeff[varW])
 
 
-  # Capture simulated parameters for calculating indirect effects
+    # Capture simulated parameters for calculating indirect effects
     if (any(names(estcoeff) %in% a1)) U7XSa1 <- mcmc[, a1]
     if (any(names(estcoeff) %in% a2)) U7XSa2 <- mcmc[, a2]
     if (any(names(estcoeff) %in% a3)) U7XSa3 <- mcmc[, a3]
@@ -1529,28 +1493,28 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
     #### Percentile and Bias-Corrected Confidence Intervals of Conditional Indirect Effects ####
 
     PCI <- array(data = 1:200,
-             dim = c(5, 8, 5),
-             dimnames = list(c("Z = Mean-2SD","Z = Mean-1SD", "Z = Mean", "Z = Mean+1SD", "Z = Mean+2SD"),
-                             c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value"),
-                             c("W = Mean-2SD","W = Mean - 1SD", "W = Mean", "W = Mean+1SD", "W = Mean+2SD")))
+                 dim = c(5, 8, 5),
+                 dimnames = list(c("Z = Mean-2SD","Z = Mean-1SD", "Z = Mean", "Z = Mean+1SD", "Z = Mean+2SD"),
+                                 c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value"),
+                                 c("W = Mean-2SD","W = Mean - 1SD", "W = Mean", "W = Mean+1SD", "W = Mean+2SD")))
     BCCI <- array(data = 1:200,
-             dim = c(5, 8, 5),
-             dimnames = list(c("Z = Mean-2SD","Z = Mean-1SD", "Z = Mean", "Z = Mean+1SD", "Z = Mean+2SD"),
-                             c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value"),
-                             c("W = Mean-2SD","W = Mean - 1SD", "W = Mean", "W = Mean+1SD", "W = Mean+2SD")))
+                  dim = c(5, 8, 5),
+                  dimnames = list(c("Z = Mean-2SD","Z = Mean-1SD", "Z = Mean", "Z = Mean+1SD", "Z = Mean+2SD"),
+                                  c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value"),
+                                  c("W = Mean-2SD","W = Mean - 1SD", "W = Mean", "W = Mean+1SD", "W = Mean+2SD")))
 
     for (Z in 1:5) {
       for (W in 1:5) {
         levelZ <- Z - 3
         levelW <- W - 3
         estX <- (U7Xa1+U7Xz1*levelZ*stdZ+U7Xw1*levelW*stdW+U7Xzw1*levelZ*stdZ*levelW*stdW)*
-                (U7Xa2+U7Xz2*levelZ*stdZ+U7Xw2*levelW*stdW+U7Xzw2*levelZ*stdZ*levelW*stdW)*
-                (U7Xa3+U7Xz3*levelZ*stdZ+U7Xw3*levelW*stdW+U7Xzw3*levelZ*stdZ*levelW*stdW)*
-                (U7Xa4+U7Xz4*levelZ*stdZ+U7Xw4*levelW*stdW+U7Xzw4*levelZ*stdZ*levelW*stdW)
+          (U7Xa2+U7Xz2*levelZ*stdZ+U7Xw2*levelW*stdW+U7Xzw2*levelZ*stdZ*levelW*stdW)*
+          (U7Xa3+U7Xz3*levelZ*stdZ+U7Xw3*levelW*stdW+U7Xzw3*levelZ*stdZ*levelW*stdW)*
+          (U7Xa4+U7Xz4*levelZ*stdZ+U7Xw4*levelW*stdW+U7Xzw4*levelZ*stdZ*levelW*stdW)
         abX <- (U7XSa1+U7XSz1*levelZ*SstdZ+U7XSw1*levelW*SstdW+U7XSzw1*levelZ*SstdZ*levelW*SstdW)*
-               (U7XSa2+U7XSz2*levelZ*SstdZ+U7XSw2*levelW*SstdW+U7XSzw2*levelZ*SstdZ*levelW*SstdW)*
-               (U7XSa3+U7XSz3*levelZ*SstdZ+U7XSw3*levelW*SstdW+U7XSzw3*levelZ*SstdZ*levelW*SstdW)*
-               (U7XSa4+U7XSz4*levelZ*SstdZ+U7XSw4*levelW*SstdW+U7XSzw4*levelZ*SstdZ*levelW*SstdW)
+          (U7XSa2+U7XSz2*levelZ*SstdZ+U7XSw2*levelW*SstdW+U7XSzw2*levelZ*SstdZ*levelW*SstdW)*
+          (U7XSa3+U7XSz3*levelZ*SstdZ+U7XSw3*levelW*SstdW+U7XSzw3*levelZ*SstdZ*levelW*SstdW)*
+          (U7XSa4+U7XSz4*levelZ*SstdZ+U7XSw4*levelW*SstdW+U7XSzw4*levelZ*SstdZ*levelW*SstdW)
         zX = qnorm(sum(abX<estX)/b.no)  # Bias-Corrected Factor
 
         ## Percentile Confidence Intervals ##
@@ -1604,21 +1568,21 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
     ## Slope Difference Tests ##
     PCISDT <- matrix(1:48, nrow = 6, dimnames = list(c("HiZ/HiW - HiZ/LoW", "HiZ/HiW - LoZ/HiW", "HiZ/LoW - LoZ/LoW",
                                                        "LoZ/HiW - LoZ/LoW", "HiZ/HiW - LoZ/LoW", "HiZ/LoW - LoZ/HiW"),
-                                              c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+                                                     c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
     BCCISDT <- matrix(1:48, nrow = 6, dimnames = list(c("HiZ/HiW - HiZ/LoW", "HiZ/HiW - LoZ/HiW", "HiZ/LoW - LoZ/LoW",
-                                                      "LoZ/HiW - LoZ/LoW", "HiZ/HiW - LoZ/LoW", "HiZ/LoW - LoZ/HiW"),
-                                               c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+                                                        "LoZ/HiW - LoZ/LoW", "HiZ/HiW - LoZ/LoW", "HiZ/LoW - LoZ/HiW"),
+                                                      c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
 
 
     ## Slope Difference Test 1 "HiZ/HiW - HiZ/LoW" ##
     estX <- (U7Xa1+U7Xz1*stdZ+U7Xw1*stdW+U7Xzw1*stdZ*stdW)*(U7Xa2+U7Xz2*stdZ+U7Xw2*stdW+U7Xzw2*stdZ*stdW)*
-            (U7Xa3+U7Xz3*stdZ+U7Xw3*stdW+U7Xzw3*stdZ*stdW)*(U7Xa4+U7Xz4*stdZ+U7Xw4*stdW+U7Xzw4*stdZ*stdW) -
-            (U7Xa1+U7Xz1*stdZ-U7Xw1*stdW-U7Xzw1*stdZ*stdW)*(U7Xa2+U7Xz2*stdZ-U7Xw2*stdW-U7Xzw2*stdZ*stdW)*
-            (U7Xa3+U7Xz3*stdZ-U7Xw3*stdW-U7Xzw3*stdZ*stdW)*(U7Xa4+U7Xz4*stdZ-U7Xw4*stdW-U7Xzw4*stdZ*stdW)
+      (U7Xa3+U7Xz3*stdZ+U7Xw3*stdW+U7Xzw3*stdZ*stdW)*(U7Xa4+U7Xz4*stdZ+U7Xw4*stdW+U7Xzw4*stdZ*stdW) -
+      (U7Xa1+U7Xz1*stdZ-U7Xw1*stdW-U7Xzw1*stdZ*stdW)*(U7Xa2+U7Xz2*stdZ-U7Xw2*stdW-U7Xzw2*stdZ*stdW)*
+      (U7Xa3+U7Xz3*stdZ-U7Xw3*stdW-U7Xzw3*stdZ*stdW)*(U7Xa4+U7Xz4*stdZ-U7Xw4*stdW-U7Xzw4*stdZ*stdW)
     abX <- (U7XSa1+U7XSz1*SstdZ+U7XSw1*SstdW+U7XSzw1*SstdZ*SstdW)*(U7XSa2+U7XSz2*SstdZ+U7XSw2*SstdW+U7XSzw2*SstdZ*SstdW)*
-           (U7XSa3+U7XSz3*SstdZ+U7XSw3*SstdW+U7XSzw3*SstdZ*SstdW)*(U7XSa4+U7XSz4*SstdZ+U7XSw4*SstdW+U7XSzw4*SstdZ*SstdW) -
-           (U7XSa1+U7XSz1*SstdZ-U7XSw1*SstdW-U7XSzw1*SstdZ*SstdW)*(U7XSa2+U7XSz2*SstdZ-U7XSw2*SstdW-U7XSzw2*SstdZ*SstdW)*
-           (U7XSa3+U7XSz3*SstdZ-U7XSw3*SstdW-U7XSzw3*SstdZ*SstdW)*(U7XSa4+U7XSz4*SstdZ-U7XSw4*SstdW-U7XSzw4*SstdZ*SstdW)
+      (U7XSa3+U7XSz3*SstdZ+U7XSw3*SstdW+U7XSzw3*SstdZ*SstdW)*(U7XSa4+U7XSz4*SstdZ+U7XSw4*SstdW+U7XSzw4*SstdZ*SstdW) -
+      (U7XSa1+U7XSz1*SstdZ-U7XSw1*SstdW-U7XSzw1*SstdZ*SstdW)*(U7XSa2+U7XSz2*SstdZ-U7XSw2*SstdW-U7XSzw2*SstdZ*SstdW)*
+      (U7XSa3+U7XSz3*SstdZ-U7XSw3*SstdW-U7XSzw3*SstdZ*SstdW)*(U7XSa4+U7XSz4*SstdZ-U7XSw4*SstdW-U7XSzw4*SstdZ*SstdW)
     zX = qnorm(sum(abX<estX)/b.no)  # Bias-Corrected Factor
 
     ## Percentile Confidence Intervals ##
@@ -1657,13 +1621,13 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
 
     ## Slope Difference Test 2 "HiZ/HiW - LoZ/HiW" ##
     estX <- (U7Xa1+U7Xz1*stdZ+U7Xw1*stdW+U7Xzw1*stdZ*stdW)*(U7Xa2+U7Xz2*stdZ+U7Xw2*stdW+U7Xzw2*stdZ*stdW)*
-            (U7Xa3+U7Xz3*stdZ+U7Xw3*stdW+U7Xzw3*stdZ*stdW)*(U7Xa4+U7Xz4*stdZ+U7Xw4*stdW+U7Xzw4*stdZ*stdW) -
-            (U7Xa1-U7Xz1*stdZ+U7Xw1*stdW-U7Xzw1*stdZ*stdW)*(U7Xa2-U7Xz2*stdZ+U7Xw2*stdW-U7Xzw2*stdZ*stdW)*
-            (U7Xa3-U7Xz3*stdZ+U7Xw3*stdW-U7Xzw3*stdZ*stdW)*(U7Xa4-U7Xz4*stdZ+U7Xw4*stdW-U7Xzw4*stdZ*stdW)
+      (U7Xa3+U7Xz3*stdZ+U7Xw3*stdW+U7Xzw3*stdZ*stdW)*(U7Xa4+U7Xz4*stdZ+U7Xw4*stdW+U7Xzw4*stdZ*stdW) -
+      (U7Xa1-U7Xz1*stdZ+U7Xw1*stdW-U7Xzw1*stdZ*stdW)*(U7Xa2-U7Xz2*stdZ+U7Xw2*stdW-U7Xzw2*stdZ*stdW)*
+      (U7Xa3-U7Xz3*stdZ+U7Xw3*stdW-U7Xzw3*stdZ*stdW)*(U7Xa4-U7Xz4*stdZ+U7Xw4*stdW-U7Xzw4*stdZ*stdW)
     abX <- (U7XSa1+U7XSz1*SstdZ+U7XSw1*SstdW+U7XSzw1*SstdZ*SstdW)*(U7XSa2+U7XSz2*SstdZ+U7XSw2*SstdW+U7XSzw2*SstdZ*SstdW)*
-           (U7XSa3+U7XSz3*SstdZ+U7XSw3*SstdW+U7XSzw3*SstdZ*SstdW)*(U7XSa4+U7XSz4*SstdZ+U7XSw4*SstdW+U7XSzw4*SstdZ*SstdW) -
-           (U7XSa1-U7XSz1*SstdZ+U7XSw1*SstdW-U7XSzw1*SstdZ*SstdW)*(U7XSa2-U7XSz2*SstdZ+U7XSw2*SstdW-U7XSzw2*SstdZ*SstdW)*
-           (U7XSa3-U7XSz3*SstdZ+U7XSw3*SstdW-U7XSzw3*SstdZ*SstdW)*(U7XSa4-U7XSz4*SstdZ+U7XSw4*SstdW-U7XSzw4*SstdZ*SstdW)
+      (U7XSa3+U7XSz3*SstdZ+U7XSw3*SstdW+U7XSzw3*SstdZ*SstdW)*(U7XSa4+U7XSz4*SstdZ+U7XSw4*SstdW+U7XSzw4*SstdZ*SstdW) -
+      (U7XSa1-U7XSz1*SstdZ+U7XSw1*SstdW-U7XSzw1*SstdZ*SstdW)*(U7XSa2-U7XSz2*SstdZ+U7XSw2*SstdW-U7XSzw2*SstdZ*SstdW)*
+      (U7XSa3-U7XSz3*SstdZ+U7XSw3*SstdW-U7XSzw3*SstdZ*SstdW)*(U7XSa4-U7XSz4*SstdZ+U7XSw4*SstdW-U7XSzw4*SstdZ*SstdW)
     zX = qnorm(sum(abX<estX)/b.no)  # Bias-Corrected Factor
 
     ## Percentile Confidence Intervals ##
@@ -1702,13 +1666,13 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
 
     ## Slope Difference Test 3 "HiZ/LoW - LoZ/LoW" ##
     estX <- (U7Xa1+U7Xz1*stdZ-U7Xw1*stdW-U7Xzw1*stdZ*stdW)*(U7Xa2+U7Xz2*stdZ-U7Xw2*stdW-U7Xzw2*stdZ*stdW)*
-            (U7Xa3+U7Xz3*stdZ-U7Xw3*stdW-U7Xzw3*stdZ*stdW)*(U7Xa4+U7Xz4*stdZ-U7Xw4*stdW-U7Xzw4*stdZ*stdW) -
-            (U7Xa1-U7Xz1*stdZ-U7Xw1*stdW+U7Xzw1*stdZ*stdW)*(U7Xa2-U7Xz2*stdZ-U7Xw2*stdW+U7Xzw2*stdZ*stdW)*
-            (U7Xa3-U7Xz3*stdZ-U7Xw3*stdW+U7Xzw3*stdZ*stdW)*(U7Xa4-U7Xz4*stdZ-U7Xw4*stdW+U7Xzw4*stdZ*stdW)
+      (U7Xa3+U7Xz3*stdZ-U7Xw3*stdW-U7Xzw3*stdZ*stdW)*(U7Xa4+U7Xz4*stdZ-U7Xw4*stdW-U7Xzw4*stdZ*stdW) -
+      (U7Xa1-U7Xz1*stdZ-U7Xw1*stdW+U7Xzw1*stdZ*stdW)*(U7Xa2-U7Xz2*stdZ-U7Xw2*stdW+U7Xzw2*stdZ*stdW)*
+      (U7Xa3-U7Xz3*stdZ-U7Xw3*stdW+U7Xzw3*stdZ*stdW)*(U7Xa4-U7Xz4*stdZ-U7Xw4*stdW+U7Xzw4*stdZ*stdW)
     abX <- (U7XSa1+U7XSz1*SstdZ-U7XSw1*SstdW-U7XSzw1*SstdZ*SstdW)*(U7XSa2+U7XSz2*SstdZ-U7XSw2*SstdW-U7XSzw2*SstdZ*SstdW)*
-           (U7XSa3+U7XSz3*SstdZ-U7XSw3*SstdW-U7XSzw3*SstdZ*SstdW)*(U7XSa4+U7XSz4*SstdZ-U7XSw4*SstdW-U7XSzw4*SstdZ*SstdW) -
-           (U7XSa1-U7XSz1*SstdZ-U7XSw1*SstdW+U7XSzw1*SstdZ*SstdW)*(U7XSa2-U7XSz2*SstdZ-U7XSw2*SstdW+U7XSzw2*SstdZ*SstdW)*
-           (U7XSa3-U7XSz3*SstdZ-U7XSw3*SstdW+U7XSzw3*SstdZ*SstdW)*(U7XSa4-U7XSz4*SstdZ-U7XSw4*SstdW+U7XSzw4*SstdZ*SstdW)
+      (U7XSa3+U7XSz3*SstdZ-U7XSw3*SstdW-U7XSzw3*SstdZ*SstdW)*(U7XSa4+U7XSz4*SstdZ-U7XSw4*SstdW-U7XSzw4*SstdZ*SstdW) -
+      (U7XSa1-U7XSz1*SstdZ-U7XSw1*SstdW+U7XSzw1*SstdZ*SstdW)*(U7XSa2-U7XSz2*SstdZ-U7XSw2*SstdW+U7XSzw2*SstdZ*SstdW)*
+      (U7XSa3-U7XSz3*SstdZ-U7XSw3*SstdW+U7XSzw3*SstdZ*SstdW)*(U7XSa4-U7XSz4*SstdZ-U7XSw4*SstdW+U7XSzw4*SstdZ*SstdW)
     zX = qnorm(sum(abX<estX)/b.no)  # Bias-Corrected Factor
 
     ## Percentile Confidence Intervals ##
@@ -1747,13 +1711,13 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
 
     ## Slope Difference Test 4 "LoZ/HiW - LoZ/LoW" ##
     estX <- (U7Xa1-U7Xz1*stdZ+U7Xw1*stdW-U7Xzw1*stdZ*stdW)*(U7Xa2-U7Xz2*stdZ+U7Xw2*stdW-U7Xzw2*stdZ*stdW)*
-            (U7Xa3-U7Xz3*stdZ+U7Xw3*stdW-U7Xzw3*stdZ*stdW)*(U7Xa4-U7Xz4*stdZ+U7Xw4*stdW-U7Xzw4*stdZ*stdW) -
-            (U7Xa1-U7Xz1*stdZ-U7Xw1*stdW+U7Xzw1*stdZ*stdW)*(U7Xa2-U7Xz2*stdZ-U7Xw2*stdW+U7Xzw2*stdZ*stdW)*
-            (U7Xa3-U7Xz3*stdZ-U7Xw3*stdW+U7Xzw3*stdZ*stdW)*(U7Xa4-U7Xz4*stdZ-U7Xw4*stdW+U7Xzw4*stdZ*stdW)
+      (U7Xa3-U7Xz3*stdZ+U7Xw3*stdW-U7Xzw3*stdZ*stdW)*(U7Xa4-U7Xz4*stdZ+U7Xw4*stdW-U7Xzw4*stdZ*stdW) -
+      (U7Xa1-U7Xz1*stdZ-U7Xw1*stdW+U7Xzw1*stdZ*stdW)*(U7Xa2-U7Xz2*stdZ-U7Xw2*stdW+U7Xzw2*stdZ*stdW)*
+      (U7Xa3-U7Xz3*stdZ-U7Xw3*stdW+U7Xzw3*stdZ*stdW)*(U7Xa4-U7Xz4*stdZ-U7Xw4*stdW+U7Xzw4*stdZ*stdW)
     abX <- (U7XSa1-U7XSz1*SstdZ+U7XSw1*SstdW-U7XSzw1*SstdZ*SstdW)*(U7XSa2-U7XSz2*SstdZ+U7XSw2*SstdW-U7XSzw2*SstdZ*SstdW)*
-           (U7XSa3-U7XSz3*SstdZ+U7XSw3*SstdW-U7XSzw3*SstdZ*SstdW)*(U7XSa4-U7XSz4*SstdZ+U7XSw4*SstdW-U7XSzw4*SstdZ*SstdW) -
-           (U7XSa1-U7XSz1*SstdZ-U7XSw1*SstdW+U7XSzw1*SstdZ*SstdW)*(U7XSa2-U7XSz2*SstdZ-U7XSw2*SstdW+U7XSzw2*SstdZ*SstdW)*
-           (U7XSa3-U7XSz3*SstdZ-U7XSw3*SstdW+U7XSzw3*SstdZ*SstdW)*(U7XSa4-U7XSz4*SstdZ-U7XSw4*SstdW+U7XSzw4*SstdZ*SstdW)
+      (U7XSa3-U7XSz3*SstdZ+U7XSw3*SstdW-U7XSzw3*SstdZ*SstdW)*(U7XSa4-U7XSz4*SstdZ+U7XSw4*SstdW-U7XSzw4*SstdZ*SstdW) -
+      (U7XSa1-U7XSz1*SstdZ-U7XSw1*SstdW+U7XSzw1*SstdZ*SstdW)*(U7XSa2-U7XSz2*SstdZ-U7XSw2*SstdW+U7XSzw2*SstdZ*SstdW)*
+      (U7XSa3-U7XSz3*SstdZ-U7XSw3*SstdW+U7XSzw3*SstdZ*SstdW)*(U7XSa4-U7XSz4*SstdZ-U7XSw4*SstdW+U7XSzw4*SstdZ*SstdW)
     zX <- qnorm(sum(abX<estX)/b.no)  # Bias-Corrected Factor
 
     ## Percentile Confidence Intervals ##
@@ -1785,7 +1749,7 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
     if ((estX>0 & min(abX)>0) | (estX<0 & max(abX)<0)) {
       BCCISDT[4,8] = 0
     } else if (qnorm(sum(abX>0)/b.no)+2*zX<0) {
-    BCCISDT[4,8] = format(round(2*pnorm((qnorm(sum(abX>0)/b.no)+2*zX)), digits = 4), nsmall = 4, scientific = FALSE)
+      BCCISDT[4,8] = format(round(2*pnorm((qnorm(sum(abX>0)/b.no)+2*zX)), digits = 4), nsmall = 4, scientific = FALSE)
     } else {
       BCCISDT[4,8] = format(round(2*pnorm(-1*(qnorm(sum(abX>0)/b.no)+2*zX)), digits = 4), nsmall = 4, scientific = FALSE)
     }
@@ -1793,13 +1757,13 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
 
     ## Slope Difference Test 5 "HiZ/HiW - LoZ/LoW" ##
     estX <- (U7Xa1+U7Xz1*stdZ+U7Xw1*stdW+U7Xzw1*stdZ*stdW)*(U7Xa2+U7Xz2*stdZ+U7Xw2*stdW+U7Xzw2*stdZ*stdW)*
-            (U7Xa3+U7Xz3*stdZ+U7Xw3*stdW+U7Xzw3*stdZ*stdW)*(U7Xa4+U7Xz4*stdZ+U7Xw4*stdW+U7Xzw4*stdZ*stdW) -
-            (U7Xa1-U7Xz1*stdZ-U7Xw1*stdW+U7Xzw1*stdZ*stdW)*(U7Xa2-U7Xz2*stdZ-U7Xw2*stdW+U7Xzw2*stdZ*stdW)*
-            (U7Xa3-U7Xz3*stdZ-U7Xw3*stdW+U7Xzw3*stdZ*stdW)*(U7Xa4-U7Xz4*stdZ-U7Xw4*stdW+U7Xzw4*stdZ*stdW)
+      (U7Xa3+U7Xz3*stdZ+U7Xw3*stdW+U7Xzw3*stdZ*stdW)*(U7Xa4+U7Xz4*stdZ+U7Xw4*stdW+U7Xzw4*stdZ*stdW) -
+      (U7Xa1-U7Xz1*stdZ-U7Xw1*stdW+U7Xzw1*stdZ*stdW)*(U7Xa2-U7Xz2*stdZ-U7Xw2*stdW+U7Xzw2*stdZ*stdW)*
+      (U7Xa3-U7Xz3*stdZ-U7Xw3*stdW+U7Xzw3*stdZ*stdW)*(U7Xa4-U7Xz4*stdZ-U7Xw4*stdW+U7Xzw4*stdZ*stdW)
     abX <- (U7XSa1+U7XSz1*SstdZ+U7XSw1*SstdW+U7XSzw1*SstdZ*SstdW)*(U7XSa2+U7XSz2*SstdZ+U7XSw2*SstdW+U7XSzw2*SstdZ*SstdW)*
-           (U7XSa3+U7XSz3*SstdZ+U7XSw3*SstdW+U7XSzw3*SstdZ*SstdW)*(U7XSa4+U7XSz4*SstdZ+U7XSw4*SstdW+U7XSzw4*SstdZ*SstdW) -
-           (U7XSa1-U7XSz1*SstdZ-U7XSw1*SstdW+U7XSzw1*SstdZ*SstdW)*(U7XSa2-U7XSz2*SstdZ-U7XSw2*SstdW+U7XSzw2*SstdZ*SstdW)*
-           (U7XSa3-U7XSz3*SstdZ-U7XSw3*SstdW+U7XSzw3*SstdZ*SstdW)*(U7XSa4-U7XSz4*SstdZ-U7XSw4*SstdW+U7XSzw4*SstdZ*SstdW)
+      (U7XSa3+U7XSz3*SstdZ+U7XSw3*SstdW+U7XSzw3*SstdZ*SstdW)*(U7XSa4+U7XSz4*SstdZ+U7XSw4*SstdW+U7XSzw4*SstdZ*SstdW) -
+      (U7XSa1-U7XSz1*SstdZ-U7XSw1*SstdW+U7XSzw1*SstdZ*SstdW)*(U7XSa2-U7XSz2*SstdZ-U7XSw2*SstdW+U7XSzw2*SstdZ*SstdW)*
+      (U7XSa3-U7XSz3*SstdZ-U7XSw3*SstdW+U7XSzw3*SstdZ*SstdW)*(U7XSa4-U7XSz4*SstdZ-U7XSw4*SstdW+U7XSzw4*SstdZ*SstdW)
     zX <- qnorm(sum(abX<estX)/b.no)  # Bias-Corrected Factor
 
     ## Percentile Confidence Intervals ##
@@ -1839,14 +1803,14 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
 
     ## Slope Difference Test 6 "HiZ/LoW - LoZ/HiW" ##
     estX <- (U7Xa1+U7Xz1*stdZ-U7Xw1*stdW-U7Xzw1*stdZ*stdW)*(U7Xa2+U7Xz2*stdZ-U7Xw2*stdW-U7Xzw2*stdZ*stdW)*
-            (U7Xa3+U7Xz3*stdZ-U7Xw3*stdW-U7Xzw3*stdZ*stdW)*(U7Xa4+U7Xz4*stdZ-U7Xw4*stdW-U7Xzw4*stdZ*stdW) -
-            (U7Xa1-U7Xz1*stdZ+U7Xw1*stdW-U7Xzw1*stdZ*stdW)*(U7Xa2-U7Xz2*stdZ+U7Xw2*stdW-U7Xzw2*stdZ*stdW)*
-            (U7Xa3-U7Xz3*stdZ+U7Xw3*stdW-U7Xzw3*stdZ*stdW)*(U7Xa4-U7Xz4*stdZ+U7Xw4*stdW-U7Xzw4*stdZ*stdW)
-     abX <- (U7XSa1+U7XSz1*SstdZ-U7XSw1*SstdW-U7XSzw1*SstdZ*SstdW)*(U7XSa2+U7XSz2*SstdZ-U7XSw2*SstdW-U7XSzw2*SstdZ*SstdW)*
-            (U7XSa3+U7XSz3*SstdZ-U7XSw3*SstdW-U7XSzw3*SstdZ*SstdW)*(U7XSa4+U7XSz4*SstdZ-U7XSw4*SstdW-U7XSzw4*SstdZ*SstdW) -
-            (U7XSa1-U7XSz1*SstdZ+U7XSw1*SstdW-U7XSzw1*SstdZ*SstdW)*(U7XSa2-U7XSz2*SstdZ+U7XSw2*SstdW-U7XSzw2*SstdZ*SstdW)*
-            (U7XSa3-U7XSz3*SstdZ+U7XSw3*SstdW-U7XSzw3*SstdZ*SstdW)*(U7XSa4-U7XSz4*SstdZ+U7XSw4*SstdW-U7XSzw4*SstdZ*SstdW)
-      zX <- qnorm(sum(abX<estX)/b.no)  # Bias-Corrected Factor
+      (U7Xa3+U7Xz3*stdZ-U7Xw3*stdW-U7Xzw3*stdZ*stdW)*(U7Xa4+U7Xz4*stdZ-U7Xw4*stdW-U7Xzw4*stdZ*stdW) -
+      (U7Xa1-U7Xz1*stdZ+U7Xw1*stdW-U7Xzw1*stdZ*stdW)*(U7Xa2-U7Xz2*stdZ+U7Xw2*stdW-U7Xzw2*stdZ*stdW)*
+      (U7Xa3-U7Xz3*stdZ+U7Xw3*stdW-U7Xzw3*stdZ*stdW)*(U7Xa4-U7Xz4*stdZ+U7Xw4*stdW-U7Xzw4*stdZ*stdW)
+    abX <- (U7XSa1+U7XSz1*SstdZ-U7XSw1*SstdW-U7XSzw1*SstdZ*SstdW)*(U7XSa2+U7XSz2*SstdZ-U7XSw2*SstdW-U7XSzw2*SstdZ*SstdW)*
+      (U7XSa3+U7XSz3*SstdZ-U7XSw3*SstdW-U7XSzw3*SstdZ*SstdW)*(U7XSa4+U7XSz4*SstdZ-U7XSw4*SstdW-U7XSzw4*SstdZ*SstdW) -
+      (U7XSa1-U7XSz1*SstdZ+U7XSw1*SstdW-U7XSzw1*SstdZ*SstdW)*(U7XSa2-U7XSz2*SstdZ+U7XSw2*SstdW-U7XSzw2*SstdZ*SstdW)*
+      (U7XSa3-U7XSz3*SstdZ+U7XSw3*SstdW-U7XSzw3*SstdZ*SstdW)*(U7XSa4-U7XSz4*SstdZ+U7XSw4*SstdW-U7XSzw4*SstdZ*SstdW)
+    zX <- qnorm(sum(abX<estX)/b.no)  # Bias-Corrected Factor
 
     ## Percentile Confidence Intervals ##
     PCISDT[6,1] <- format(round(quantile(abX,c(0.005)), digits = 4), nsmall = 4, scientific = FALSE)
@@ -1954,19 +1918,19 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
       y.lower = 1.5*min(df_long$y_value) - 0.5*mean(df_long$y_value)
 
       p_int <<- ggplot(data = df_long, aes(x = x_var, y = y_value, color = line_id, linetype = line_id)) +
-                    xlim(-2.5, 2.5) +
-                    ylim(y.lower, y.upper) +
-                    geom_line(linewidth=1) +
-                    scale_linetype_manual(name = "Moderator Levels\nHi = mean + 1sd\nLo = mean - 1sd",
-                                          values = c("line1" = "solid", "line2" = "twodash", "line3" = "solid", "line4" = "twodash"),
-                                          labels = c("Hi-Z, Hi-W", "Hi-Z, Lo-W", "Lo-Z, Hi-W", "Lo-Z, Lo-W")) +
-                    scale_color_manual(name = "Moderator Levels\nHi = mean + 1sd\nLo = mean - 1sd",
-                                          values = c("line1" = "black", "line2" = "black", "line3" = "grey", "line4"="grey"),
-                                          labels = c("Hi-Z, Hi-W", "Hi-Z, Lo-W", "Lo-Z, Hi-W", "Lo-Z, Lo-W")) +
-                    labs(title = "Standardized Three-Way Interaction Effects",
-                             x = "X-axis Label",
-                             y = "Indirect Effect of X on Y (through M)") +
-                    theme_classic() # Optional: Apply a theme
+        xlim(-2.5, 2.5) +
+        ylim(y.lower, y.upper) +
+        geom_line(linewidth=1) +
+        scale_linetype_manual(name = "Moderator Levels\nHi = mean + 1sd\nLo = mean - 1sd",
+                              values = c("line1" = "solid", "line2" = "twodash", "line3" = "solid", "line4" = "twodash"),
+                              labels = c("Hi-Z, Hi-W", "Hi-Z, Lo-W", "Lo-Z, Hi-W", "Lo-Z, Lo-W")) +
+        scale_color_manual(name = "Moderator Levels\nHi = mean + 1sd\nLo = mean - 1sd",
+                           values = c("line1" = "black", "line2" = "black", "line3" = "grey", "line4"="grey"),
+                           labels = c("Hi-Z, Hi-W", "Hi-Z, Lo-W", "Lo-Z, Hi-W", "Lo-Z, Lo-W")) +
+        labs(title = "Standardized Three-Way Interaction Effects",
+             x = "X-axis Label",
+             y = "Indirect Effect of X on Y (through M)") +
+        theme_classic() # Optional: Apply a theme
 
       ggplot2::ggsave("3-Way Interaction Figure.png", width = 22.86, height = 16.51, units = "cm")
 
@@ -1995,82 +1959,42 @@ momo <- function(estcoeff, stdyx.estcoeff, Tech3,
     Z <- "NA"
   }
 
-  return(list(a1=U7Xa1, a2=U7Xa2, a3=U7Xa3, a4=U7Xa4,
-              z1=U7Xz1, z2=U7Xz2, z3=U7Xz3, z4=U7Xz4,
-              w1=U7Xw1, w2=U7Xw2, w3=U7Xw3, w4=U7Xw4, sd_z=sd_z,
-              Sa1=U7XSa1, Sa2=U7XSa2, Sa3=U7XSa3, Sa4=U7XSa4,
-              Sz1=U7XSz1, Sz2=U7XSz2, Sz3=U7XSz3, Sz4=U7XSz4,
-              Sw1=U7XSw1, Sw2=U7XSw2, Sw3=U7XSw3, Sw4=U7XSw4,
-              b.no = b.no, NoModz = NoModz, NoModw = NoModw, Z=Z))
+  invisible(list(a1=U7Xa1, a2=U7Xa2, a3=U7Xa3, a4=U7Xa4,
+                 z1=U7Xz1, z2=U7Xz2, z3=U7Xz3, z4=U7Xz4,
+                 w1=U7Xw1, w2=U7Xw2, w3=U7Xw3, w4=U7Xw4, sd_z=sd_z,
+                 Sa1=U7XSa1, Sa2=U7XSa2, Sa3=U7XSa3, Sa4=U7XSa4,
+                 Sz1=U7XSz1, Sz2=U7XSz2, Sz3=U7XSz3, Sz4=U7XSz4,
+                 Sw1=U7XSw1, Sw2=U7XSw2, Sw3=U7XSw3, Sw4=U7XSw4,
+                 b.no = b.no, NoModz = NoModz, NoModw = NoModw, Z=Z))
 
-}  ## ===== End (function momo) ===== ##
+}  ## ===== End (function momo.CI) ===== ##
 
 
 
-## ===== Simulation of Defined Function (modsem) ===== ##
-#' Monte Carlo Simulation for Confidence Intervals of Defined Function (modsem_da)
+## ===== Simulation of Defined Function (momo.fun) ===== ##
+#' Confidence Intervals of Defined Function
 #'
-#' Generate confidence intervals of defined function from modsem da approaches (lms or qml) results using Monte Carlo simulation.
+#' Generate confidence intervals of a defined function from parameters in momo.resample object.
 #'
-#' @param object modsem object (output from modsem).
-#' @param Sfunction function of estimated parameters from modsem object.
-#' @param R number of Monte Carlo simulation samples (in millions). For example, R=5 (default) generates 5,000,000 simulated samples.
+#' @param object momo.resample object (output from momo.resample).
+#' @param Sfunction function of estimated parameters from momo.resample object.
 #'
-#' @return momo confidence intervals.
+#' @return momo function parameter and confidence intervals.
 #' @export
 #' @examples
 #'
 #' ## -- Example -- ##
 #'
-#' # modsem object is "est_lms"
+#' # momo.resample object is "mcObject"
 #'
-#' momo_modsem_fun(est_lms, Sfunction = "a1*a2")
+#' momo.fun(mcObject, Sfunction = "a1*a2")
 #'
 
-momo_modsem_fun <- function(object, Sfunction="NULL", R=5) {
+momo.fun <- function(object, Sfunction="NULL") {
 
-  dp <- all.vars(parse(text = Sfunction))
-  var_label <- parameter_estimates(object)$label
-  var_label <- var_label[var_label != ""]
-  if (all(unlist(dp) %in% unlist(var_label)) == FALSE) {
-    stop("Element(s) in the Sfunction not an estimated parameter in modsem object")
-  }
-
-  ## Extract defined parameters and vcov ##
-
-  if (is(object) == "modsem_pi") {
-    XISETAS <- paste(unlist(object$elementsInProdNames), collapse = " ")
-    split_elements <- unlist(strsplit(XISETAS, split = " "))
-    XISETAS <- unique(split_elements)
-  } else {
-    XISETAS <- c(object$model$models[[1]]$info$xis, object$model$models[[1]]$info$etas)
-  } # end if modsem_pi
-  varIV <- paste0(XISETAS, "~~", XISETAS)
-
-  dd <- modsem::parameter_estimates(object)
-  PAR <- dd[which(dd[,"label"] != ""),"label"]
-  PAR <- c(PAR, varIV)
-
-  temp <- modsem::modsem_coef(object)
-  estcoeff <- temp[PAR]
-  Temp3 <- modsem::modsem_vcov(object)
-  Tech3 <- Temp3[PAR, PAR]
-
-
-  ## -- Monte Carlo Simulation of R*1e6 samples, default: R = 5 -- ##
-  mcmc <- MASS::mvrnorm(n=R*1e6, mu=estcoeff, Sigma=Tech3, tol = 1e-6)
-
-  estcoeff <- estcoeff[dp]
-  mcmc <- mcmc[, dp]
-
+  mcmc <- object[[1]]
   b.no <- nrow(mcmc)
-  R.no <- format(R*1e6, scientific = FALSE)
-
-  # ===== Print number of simulated samples
-  cat("\n", "   Number of requested simulated samples = ", R.no)
-  cat("\n", "   Number of completed simulated samples = ", b.no, rep("\n",2))
-
-
+  estcoeff <- object[[2]]
   cat("Simulated Defined Function Values", rep("\n", 2))
 
   # ==================================================================== #
@@ -2097,7 +2021,7 @@ momo_modsem_fun <- function(object, Sfunction="NULL", R=5) {
 
   #### Percentile Confidence Intervals of Conditional Indirect Effects ####
   PCI <- matrix(1:8, nrow = 1, dimnames = list(c("        "),
-                                             c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+                                               c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
 
   PCI[1,1] <- format(round(quantile(abM,c(0.005)), digits = 4), nsmall = 4, scientific = FALSE)
   PCI[1,2] <- format(round(quantile(abM,c(0.025)), digits = 4), nsmall = 4, scientific = FALSE)
@@ -2124,7 +2048,7 @@ momo_modsem_fun <- function(object, Sfunction="NULL", R=5) {
   #### Bias-Corrected Confidence Intervals ####
 
   BCCI <- matrix(1:8, nrow = 1, dimnames = list(c("        "),
-                                              c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
+                                                c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
 
   BCCI[1,1] <- format(round(quantile(abM,probs=pnorm(2*zM+qnorm(0.005))), digits = 4), nsmall = 4, scientific = FALSE)
   BCCI[1,2] <- format(round(quantile(abM,probs=pnorm(2*zM+qnorm(0.025))), digits = 4), nsmall = 4, scientific = FALSE)
@@ -2147,352 +2071,18 @@ momo_modsem_fun <- function(object, Sfunction="NULL", R=5) {
   print(BCCI, quote=FALSE, right=TRUE)
   cat("\n")
 
-}  ## ===== End (function momo_modsem_fun) ===== ##
+}  ## ===== End (function momo.fun) ===== ##
 
 
 
 
 
-## ===== Simulation of Defined Function (lavaan) ===== ##
-#' Monte Carlo Simulation for Confidence Intervals of Defined Function (lavaan)
+## ===== FUNCTION momo.JNplot to plot Johnson-Neyman Figure ===== ##
+#' Generate Johnson-Neyman Figure from momo.resample object
 #'
-#' Generate confidence intervals of defined function from lavaan results using Monte Carlo simulation.
+#' Generate Johnson-Neyman Figure from momo.resample object
 #'
-#' @param object lavaan object (output from lavaan).
-#' @param Sfunction function of estimated parameters from lavaan object.
-#' @param R number of Monte Carlo simulation samples (in millions). For example, R=5 (default) generates 5,000,000 simulated samples.
-#'
-#' @return momo confidence intervals.
-#' @export
-#' @examples
-#'
-#' ## -- Example -- ##
-#'
-#' # lavaan object is "est_lms"
-#'
-#' momo_lavaan_fun(est_lms, Sfunction = "a1*a2")
-#'
-
-momo_lavaan_fun <- function(object, Sfunction="NULL", R=5) {
-
-  dp <- all.vars(parse(text = Sfunction))
-  var_label <- lavaan::parameterEstimates(object)$label
-  var_label <- var_label[var_label != ""]
-  if (all(unlist(dp) %in% unlist(var_label)) == FALSE) {
-    stop("Element(s) in the Sfunction not an estimated parameter in modsem object")
-  }
-
-  ## Extract defined parameters and vcov ##
-  IVvar <- lavNames(object, "eqs.x")
-  varIV <- paste0(IVvar, "~~", IVvar)
-
-  dd <- lavaan::parameterEstimates(object, standardized=TRUE, remove.nonfree=TRUE, remove.def=TRUE)
-  PAR <- dd[which(dd[,"label"] != ""),"label"]
-
-  temp <- lavaan::coef(object)
-  estcoeff <- temp[PAR]
-  Temp3 <- lavaan::vcov(object)
-  Tech3 <- Temp3[PAR, PAR]
-
-  ## -- Monte Carlo Simulation of R*1e6 samples, default: R = 5 -- ##
-  mcmc <- MASS::mvrnorm(n=R*1e6, mu=estcoeff, Sigma=Tech3, tol = 1e-6)
-
-  estcoeff <- estcoeff[dp]
-  mcmc <- mcmc[, dp]
-
-  b.no <- nrow(mcmc)
-  R.no <- format(R*1e6, scientific = FALSE)
-
-  # ===== Print number of simulated samples
-  cat("\n", "   Number of requested simulated samples = ", R.no)
-  cat("\n", "   Number of completed simulated samples = ", b.no, rep("\n",2))
-
-
-  cat("Simulated Defined Function Values", rep("\n", 2))
-
-  # ==================================================================== #
-
-  # Calculate estimated parameter from Dfunction
-  list2env(as.list(estcoeff), envir = .GlobalEnv)
-  estM  <- eval(parse(text=Sfunction))
-
-
-  # Calculate Simulated parameter from Dfunction
-  mcmc <- as.data.frame(mcmc)
-  mcmc <- mcmc %>%
-    mutate(abM = eval(parse(text=Sfunction)))
-  abM <- mcmc[, "abM"]
-
-  #### Confidence Intervals and p-value ####
-
-  # Calculate Percentile Probability
-  if (quantile(abM,probs=0.5)>0) {
-    pM = 2*(sum(abM<0)/b.no)
-  } else {
-    pM = 2*(sum(abM>0)/b.no)
-  }
-
-  #### Percentile Confidence Intervals of Conditional Indirect Effects ####
-  PCI <- matrix(1:8, nrow = 1, dimnames = list(c("        "),
-                                             c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
-
-  PCI[1,1] <- format(round(quantile(abM,c(0.005)), digits = 4), nsmall = 4, scientific = FALSE)
-  PCI[1,2] <- format(round(quantile(abM,c(0.025)), digits = 4), nsmall = 4, scientific = FALSE)
-  PCI[1,3] <- format(round(quantile(abM,c(0.05)), digits = 4), nsmall = 4, scientific = FALSE)
-  PCI[1,4] <- format(round(estM, digits = 4), nsmall = 4, scientific = FALSE)
-  PCI[1,5] <- format(round(quantile(abM,c(0.95)), digits = 4), nsmall = 4, scientific = FALSE)
-  PCI[1,6] <- format(round(quantile(abM,c(0.975)), digits = 4), nsmall = 4, scientific = FALSE)
-  PCI[1,7] <- format(round(quantile(abM,c(0.995)), digits = 4), nsmall = 4, scientific = FALSE)
-  PCI[1,8] <- format(round(pM, digits = 4), nsmall = 4, scientific = FALSE)
-
-  # Bias-Corrected Factor
-  zM = qnorm(sum(abM<estM)/b.no)
-
-  # Calculate Bias-Corrected Probability
-
-  if ((estM>0 & min(abM)>0) | (estM<0 & max(abM)<0)) {
-    pbM = 0
-  } else if (qnorm(sum(abM>0)/b.no)+2*zM<0) {
-    pbM = 2*pnorm((qnorm(sum(abM>0)/b.no)+2*zM))
-  } else {
-    pbM = 2*pnorm(-1*(qnorm(sum(abM>0)/b.no)+2*zM))
-  }
-
-  #### Bias-Corrected Confidence Intervals ####
-
-  BCCI <- matrix(1:8, nrow = 1, dimnames = list(c("        "),
-                                              c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
-
-  BCCI[1,1] <- format(round(quantile(abM,probs=pnorm(2*zM+qnorm(0.005))), digits = 4), nsmall = 4, scientific = FALSE)
-  BCCI[1,2] <- format(round(quantile(abM,probs=pnorm(2*zM+qnorm(0.025))), digits = 4), nsmall = 4, scientific = FALSE)
-  BCCI[1,3] <- format(round(quantile(abM,probs=pnorm(2*zM+qnorm(0.050))), digits = 4), nsmall = 4, scientific = FALSE)
-  BCCI[1,4] <- format(round(estM, digits = 4), nsmall = 4, scientific = FALSE)
-  BCCI[1,5] <- format(round(quantile(abM,probs=pnorm(2*zM+qnorm(0.950))), digits = 4), nsmall = 4, scientific = FALSE)
-  BCCI[1,6] <- format(round(quantile(abM,probs=pnorm(2*zM+qnorm(0.975))), digits = 4), nsmall = 4, scientific = FALSE)
-  BCCI[1,7] <- format(round(quantile(abM,probs=pnorm(2*zM+qnorm(0.995))), digits = 4), nsmall = 4, scientific = FALSE)
-  BCCI[1,8] <- format(round(pbM, digits = 4), nsmall = 4, scientific = FALSE)
-
-  cat("\n")
-  cat("Percentile Confidence Intervals for Sfunction", rep("\n", 2))
-  rownames(PCI) <- rep("    ", nrow(PCI))
-  print(PCI, quote=FALSE, right=TRUE)
-  cat("\n")
-
-  cat("\n")
-  cat("Bias-Corrected Confidence Intervals for Sfunction", rep("\n", 2))
-  rownames(BCCI) <- rep("    ", nrow(BCCI))
-  print(BCCI, quote=FALSE, right=TRUE)
-  cat("\n")
-
-}  ## ===== End (function momo_lavaan_fun) ===== ##
-
-
-
-
-
-## ====== Function "momo_mplus_fun" Monte Carlo Confidence Intervals for Defined Function (mplus) ====== ##
-#' Monte Carlo Simulation for Confidence Intervals of Defined Function (mplus)
-#'
-#' Generate confidence intervals of a defined function from Mplus results using Monte Carlo simulation.
-#' Location of estimated parameters can be found in momo::TECH1().
-#'
-#' @param mplus_output_file Mplus output (.out) file (output from Mplus).
-#' @param results_file Mplus a text file (.txt) that saves the Mplus results (RESULTS IS "filename.txt" in Mplus SAVEDATA:).
-#' @param a1 parameter name of a1 in MODEL CONSTRAINT: NEW.
-#' @param a2 parameter name of a2 in MODEL CONSTRAINT: NEW.
-#' @param a3 parameter name of a3 in MODEL CONSTRAINT: NEW.
-#' @param a4 parameter name of a4 in MODEL CONSTRAINT: NEW.
-#' @param z1 parameter name of z1 in MODEL CONSTRAINT: NEW.
-#' @param z2 parameter name of z2 in MODEL CONSTRAINT: NEW.
-#' @param z3 parameter name of z3 in MODEL CONSTRAINT: NEW.
-#' @param z4 parameter name of z4 in MODEL CONSTRAINT: NEW.
-#' @param w1 parameter name of w1 in MODEL CONSTRAINT: NEW.
-#' @param w2 parameter name of w2 in MODEL CONSTRAINT: NEW.
-#' @param w3 parameter name of w3 in MODEL CONSTRAINT: NEW.
-#' @param w4 parameter name of w4 in MODEL CONSTRAINT: NEW.
-#' @param zw1 parameter name of zw1 in MODEL CONSTRAINT: NEW.
-#' @param zw2 parameter name of zw2 in MODEL CONSTRAINT: NEW.
-#' @param zw3 parameter name of zw3 in MODEL CONSTRAINT: NEW.
-#' @param zw4 parameter name of zw4 in MODEL CONSTRAINT: NEW.
-#' @param Sfunction function of estimated parameters from Mplus outputs.
-#' @param R number of Monte Carlo simulation samples (in millions). For example, R=5 (default) generates 5,000,000 simulated samples.
-#'
-#' @return confidence intervals of defined function
-#' @export
-#' @examples
-#'
-#' ## -- Example -- ##
-#'
-#' # mplus_output_file is "model cc4.out"
-#' # output momo object is mcObject
-#'
-#' mcObject <- momo_mplus_fun("model cc4.out", a1 = "A1", a2 = "A2", Sfunction="a1*a2")
-#'
-
-momo_mplus_fun <- function(mplus_output_file = "mplus_output.out",
-                             a1="NA", a2="NA", a3="NA", a4="NA",
-                             z1="NA", z2="NA", z3="NA", z4="NA",
-                             w1="NA", w2="NA", w3="NA", w4="NA",
-                             zw1="NA", zw2="NA", zw3="NA", zw4="NA",
-                             Sfunction="NULL", R=5) {
-
-  ## -- Convert arguments to upper case -- ##
-  a1 <- toupper(a1)
-  a2 <- toupper(a2)
-  a3 <- toupper(a3)
-  a4 <- toupper(a4)
-  z1 <- toupper(z1)
-  z2 <- toupper(z2)
-  z3 <- toupper(z3)
-  z4 <- toupper(z4)
-  w1 <- toupper(w1)
-  w2 <- toupper(w2)
-  w3 <- toupper(w3)
-  w4 <- toupper(w4)
-  zw1 <- toupper(zw1)
-  zw2 <- toupper(zw2)
-  zw3 <- toupper(zw3)
-  zw4 <- toupper(zw4)
-
-  ## -- Extract defined parameters and vcov -- ##
-  dp <- c(a1, a2, a3, a4, z1, z2, z3, z4, w1, w2, w3, w4, zw1, zw2, zw3, zw4)
-  dp[1:(length(dp) - 2)] <- toupper(dp[1:(length(dp) - 2)])
-  dp <- dp[dp != "NA"]
-
-  my_model <- readModels(mplus_output_file)
-
-  NEW <- my_model$tech1$parameterSpecification$THE.ADDITIONAL.PARAMETERS$new_additional
-  names(NEW) <- colnames(NEW)
-
-  Tech3 <- my_model$tech3$paramCov
-  Tech3[upper.tri(Tech3)] <- t(Tech3)[upper.tri(Tech3)]
-  no.Tech1 <- nrow(Tech3)
-  Tech3 <- Tech3[NEW, NEW]
-  colnames(Tech3) <- names(NEW)
-  rownames(Tech3) <- names(NEW)
-
-  estcoeff <- scan(gsub('"', '', my_model$input$savedata$results), sep = "", what = numeric())
-
-  estcoeff <- estcoeff[NEW]
-  names(estcoeff) <- names(NEW)
-
-
-  # -- Reassigning variable names -- #
-  if (a1 != "NA") a1 <- estcoeff["A1"]
-  if (a2 != "NA") a2 <- estcoeff["A2"]
-  if (a3 != "NA") a3 <- estcoeff["A3"]
-  if (a4 != "NA") a4 <- estcoeff["A4"]
-  if (z1 != "NA") z1 <- estcoeff["Z1"]
-  if (z2 != "NA") z2 <- estcoeff["Z2"]
-  if (z3 != "NA") z3 <- estcoeff["Z3"]
-  if (z4 != "NA") z4 <- estcoeff["Z4"]
-  if (w1 != "NA") w1 <- estcoeff["W1"]
-  if (w2 != "NA") w2 <- estcoeff["W2"]
-  if (w3 != "NA") w3 <- estcoeff["W3"]
-  if (w4 != "NA") w4 <- estcoeff["W4"]
-  if (zw1 != "NA") zw1 <- estcoeff["ZW1"]
-  if (zw2 != "NA") zw2 <- estcoeff["ZW2"]
-  if (zw3 != "NA") zw3 <- estcoeff["ZW3"]
-  if (zw4 != "NA") zw4 <- estcoeff["ZW4"]
-
-  ## -- Monte Carlo Simulation of R*1e6 samples, default: R = 5 -- ##
-  mcmc <<- MASS::mvrnorm(n=R*1e6, mu=estcoeff, Sigma=Tech3, tol = 1e-6)
-
-  b.no <- nrow(mcmc)
-  R.no <- format(R*1e6, scientific = FALSE)
-
-  # ===== Print number of simulated samples
-  cat("\n", "   Number of requested simulated samples = ", R.no)
-  cat("\n", "   Number of completed simulated samples = ", b.no, rep("\n",2))
-
-
-  cat("Simulated Defined Function Values", rep("\n", 2))
-
-  # ==================================================================== #
-
-
-  # Calculate estimated parameter from Dfunction
-  estM  <- eval(parse(text=Sfunction))
-
-  # Calculate Simulated parameter from Dfunction
-  mcmc <<- as.data.frame(mcmc)
-  mcmc <- mcmc %>%
-    mutate(abM = eval(parse(text=Sfunction)))
-  abM <- mcmc[, "abM"]
-
-  #### Confidence Intervals and p-value ####
-
-  # Calculate Percentile Probability
-  if (quantile(abM,probs=0.5)>0) {
-    pM = 2*(sum(abM<0)/b.no)
-  } else {
-    pM = 2*(sum(abM>0)/b.no)
-  }
-
-  #### Percentile Confidence Intervals of Conditional Indirect Effects ####
-  PCI <- matrix(1:8, nrow = 1, dimnames = list(c("        "),
-                                             c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
-
-  PCI[1,1] <- format(round(quantile(abM,c(0.005)), digits = 4), nsmall = 4, scientific = FALSE)
-  PCI[1,2] <- format(round(quantile(abM,c(0.025)), digits = 4), nsmall = 4, scientific = FALSE)
-  PCI[1,3] <- format(round(quantile(abM,c(0.05)), digits = 4), nsmall = 4, scientific = FALSE)
-  PCI[1,4] <- format(round(estM, digits = 4), nsmall = 4, scientific = FALSE)
-  PCI[1,5] <- format(round(quantile(abM,c(0.95)), digits = 4), nsmall = 4, scientific = FALSE)
-  PCI[1,6] <- format(round(quantile(abM,c(0.975)), digits = 4), nsmall = 4, scientific = FALSE)
-  PCI[1,7] <- format(round(quantile(abM,c(0.995)), digits = 4), nsmall = 4, scientific = FALSE)
-  PCI[1,8] <- format(round(pM, digits = 4), nsmall = 4, scientific = FALSE)
-
-  # Bias-Corrected Factor
-  zM = qnorm(sum(abM<estM)/b.no)
-
-  # Calculate Bias-Corrected Probability
-
-  if ((estM>0 & min(abM)>0) | (estM<0 & max(abM)<0)) {
-    pbM = 0
-  } else if (qnorm(sum(abM>0)/b.no)+2*zM<0) {
-    pbM = 2*pnorm((qnorm(sum(abM>0)/b.no)+2*zM))
-  } else {
-    pbM = 2*pnorm(-1*(qnorm(sum(abM>0)/b.no)+2*zM))
-  }
-
-  #### Bias-Corrected Confidence Intervals ####
-
-  BCCI <- matrix(1:8, nrow = 1, dimnames = list(c("        "),
-                                              c("     0.5%","     2.5%","       5%"," Estimate","      95%","    97.5%","    99.5%", "  p-value")))
-
-  BCCI[1,1] <- format(round(quantile(abM,probs=pnorm(2*zM+qnorm(0.005))), digits = 4), nsmall = 4, scientific = FALSE)
-  BCCI[1,2] <- format(round(quantile(abM,probs=pnorm(2*zM+qnorm(0.025))), digits = 4), nsmall = 4, scientific = FALSE)
-  BCCI[1,3] <- format(round(quantile(abM,probs=pnorm(2*zM+qnorm(0.050))), digits = 4), nsmall = 4, scientific = FALSE)
-  BCCI[1,4] <- format(round(estM, digits = 4), nsmall = 4, scientific = FALSE)
-  BCCI[1,5] <- format(round(quantile(abM,probs=pnorm(2*zM+qnorm(0.950))), digits = 4), nsmall = 4, scientific = FALSE)
-  BCCI[1,6] <- format(round(quantile(abM,probs=pnorm(2*zM+qnorm(0.975))), digits = 4), nsmall = 4, scientific = FALSE)
-  BCCI[1,7] <- format(round(quantile(abM,probs=pnorm(2*zM+qnorm(0.995))), digits = 4), nsmall = 4, scientific = FALSE)
-  BCCI[1,8] <- format(round(pbM, digits = 4), nsmall = 4, scientific = FALSE)
-
-  cat("\n")
-  cat("Percentile Confidence Intervals for Sfunction", rep("\n", 2))
-  rownames(PCI) <- rep("    ", nrow(PCI))
-  print(PCI, quote=FALSE, right=TRUE)
-  cat("\n")
-
-  cat("\n")
-  cat("Bias-Corrected Confidence Intervals for Sfunction", rep("\n", 2))
-  rownames(BCCI) <- rep("    ", nrow(BCCI))
-  print(BCCI, quote=FALSE, right=TRUE)
-  cat("\n")
-
-}  ## ===== End (function momo_mplus_fun) ===== ##
-
-
-
-
-
-## ===== FUNCTION JN_plot to plot Johnson-Neyman Figure ===== ##
-#' Generate Johnson-Neyman Figure from momo object
-#'
-#' Generate Johnson-Neyman Figure from momo object
-#'
-#' @param momoObject momo object (output from momo_modsem or momo_mplus).
+#' @param momoObject momo.resample object (output from momo.resample).
 #' @param min_z minimum values of moderator Z on the graph.
 #' @param max_z maximum values of moderator Z on the graph.
 #' @param detail detail of the Johnson-Neyman graph. The higher the number, the smoother the lines, but it will also take longer to generate.
@@ -2507,15 +2097,15 @@ momo_mplus_fun <- function(mplus_output_file = "mplus_output.out",
 #'
 #' ## -- Example -- ##
 #'
-#' # momoObject is mcObject & output JN_plot object is JN_figure
+#' # momoObject is momoObject & output momo.JNplot object is JN_figure
 #'
-#' JN_figure <- JN_plot(mcObject)
+#' JN_figure <- momo.JNplot(mcObject)
 #'
 
-JN_plot <- function (momoObject, ci="bc",
-                     min_z = -3, max_z = 3, detail = 300,
-                     lower.quantile = 0.025, upper.quantile = 0.975,
-                     alpha = 0.2, sd.line = 2)
+momo.JNplot <- function (momoObject, ci="bc",
+                         min_z = -3, max_z = 3, detail = 300,
+                         lower.quantile = 0.025, upper.quantile = 0.975,
+                         alpha = 0.2, sd.line = 2)
 {
 
   cat("\n")
@@ -2591,8 +2181,8 @@ JN_plot <- function (momoObject, ci="bc",
   CI$sig <- CI$betax.lower > 0 | CI$betax.upper < 0
 
   df_plot <- data.frame(z = CI$z, slope = as.numeric(CI$betax),
-        lower_all = as.numeric(CI$betax.lower), upper_all = as.numeric(CI$betax.upper),
-        significant = CI$sig)
+                        lower_all = as.numeric(CI$betax.lower), upper_all = as.numeric(CI$betax.upper),
+                        significant = CI$sig)
   siglabel <- "CI excludes 0"
   significance_chr <- ifelse(df_plot$significant, siglabel, "n.s.")
   df_plot$Significance <- factor(significance_chr, levels = c(siglabel, "n.s."))
@@ -2645,250 +2235,44 @@ JN_plot <- function (momoObject, ci="bc",
 
   ## -- Plot with ggplot2 -- ##
   p_jn <- ggplot2::ggplot(df_plot, ggplot2::aes(x = z, y = slope)) +
-       ggplot2::geom_ribbon(ggplot2::aes(ymin = lower_all, ymax = upper_all,
-                     fill = Significance, group = run_id), alpha = alpha, na.rm = TRUE) +
-       ggplot2::geom_line(ggplot2::aes(color = Significance,
-                     group = run_id), linewidth = 1, na.rm = TRUE) +
-       ggplot2::geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
-       suppressWarnings(ggplot2::geom_segment(mapping = ggplot2::aes(x = x_start,
-                     xend = x_end, y = y_start, yend = y_end, color = hline_label,
-                     fill = hline_label), data = data_hline, linewidth = 1.5)) +
-       ggplot2::ggtitle("Johnson-Neyman Figure of Moderated-Mediating Effect") +
-       ggplot2::scale_discrete_manual(aesthetics = c("colour",
-                    "fill"), name = "", values = values, breaks = breaks, drop = FALSE) +
-       ggplot2::scale_y_continuous(limits = y_range) +
-       ggplot2::labs(x = Z, y = paste("Indirect Effect")) +
-       ggplot2::theme_minimal() +
-       ggplot2::theme(plot.title = element_text(hjust = 0.5))
-       if (length(approx_jn) > 0) {
-         top_y <- suppressWarnings(max(df_plot$slope[is.finite(df_plot$slope)], na.rm = TRUE))
-         if (!is.finite(top_y)) top_y <- y_range[2]
-         for (zstar in approx_jn) {
-           if (is.finite(zstar) && zstar >= min_z_abs && zstar <= max_z_abs) {
-             p_jn <- p_jn + ggplot2::geom_vline(xintercept = zstar, linetype = "dashed", color = "red") +
-                    ggplot2::annotate("text", x = zstar, y = top_y, label = paste("JN point (~):",
-                              round(zstar, 2)), hjust = -0.1, vjust = 1, color = "black")
-           }
-         }
-       }
+    ggplot2::geom_ribbon(ggplot2::aes(ymin = lower_all, ymax = upper_all,
+                                      fill = Significance, group = run_id), alpha = alpha, na.rm = TRUE) +
+    ggplot2::geom_line(ggplot2::aes(color = Significance,
+                                    group = run_id), linewidth = 1, na.rm = TRUE) +
+    ggplot2::geom_hline(yintercept = 0, color = "black", linewidth = 0.5) +
+    suppressWarnings(ggplot2::geom_segment(mapping = ggplot2::aes(x = x_start,
+                                                                  xend = x_end, y = y_start, yend = y_end, color = hline_label,
+                                                                  fill = hline_label), data = data_hline, linewidth = 1.5)) +
+    ggplot2::ggtitle("Johnson-Neyman Figure of Moderated-Mediating Effect") +
+    ggplot2::scale_discrete_manual(aesthetics = c("colour",
+                                                  "fill"), name = "", values = values, breaks = breaks, drop = FALSE) +
+    ggplot2::scale_y_continuous(limits = y_range) +
+    ggplot2::labs(x = Z, y = paste("Indirect Effect")) +
+    ggplot2::theme_minimal() +
+    ggplot2::theme(plot.title = element_text(hjust = 0.5))
+  if (length(approx_jn) > 0) {
+    top_y <- suppressWarnings(max(df_plot$slope[is.finite(df_plot$slope)], na.rm = TRUE))
+    if (!is.finite(top_y)) top_y <- y_range[2]
+    for (zstar in approx_jn) {
+      if (is.finite(zstar) && zstar >= min_z_abs && zstar <= max_z_abs) {
+        p_jn <- p_jn + ggplot2::geom_vline(xintercept = zstar, linetype = "dashed", color = "red") +
+          ggplot2::annotate("text", x = zstar, y = top_y, label = paste("JN point (~):",
+                                                                        round(zstar, 2)), hjust = -0.1, vjust = 1, color = "black")
+      }
+    }
+  }
 
   ggplot2::ggsave("Johnson-Neyman Figure.png", width = 22.86, height = 16.51, units = "cm")
+
+  cat("\n")
+  cat("Figure is p_jn and is saved as 'Johnson-Neyman Figure.png'", rep("\n", 2))
 
   ## -- Print the Figure -- ##
   print(p_jn)
   return(p_jn)
 
-  cat("\n")
-  cat("Figure is p_jn and is saved as 'Johnson-Neyman Figure.png'", rep("\n", 2))
-
 
 } ## ===== End (plot Johnson-Neyman Figure) ===== ##
-
-
-## ===== Function TECH1 to identify position of reference parameters for Mplus outputs ===== ##
-#' Present Mplus results with matching numbers on TECH1 outputs from Mplus
-#'
-#' Present Mplus estimated parameters with matching number on TECH1 outputs (for inputs in momo_mplus)
-#'
-#' @param mplusoutput.file Mplus output file (with TECH 1 on the OUTPUT: command in Mplus input file).
-#'
-#' @return outputs on screen
-#' @export
-#' @examples
-#'
-#' ## -- Example -- ##
-#'
-#' # Mplus output file "example_d3.out" & output TECH1 object is Tech1
-#'
-#' Tech1 <- TECH1("example_d3.out")
-#'
-TECH1 <- function(mplusoutput.file = "example_d3.out") {
-  mplus_output <- MplusAutomation::readModels(mplusoutput.file)
-  results <- mplus_output$parameters
-  spec <<- mplus_output$tech1$parameterSpecification
-
-  ## ----- One-level ----- ##
-  if (ncol(results$unstandardized) == 6) {
-
-    Tech1 <- matrix(nrow = 0, ncol = 4)
-    colnames(Tech1) <- c("par", "Row_Name", "Col_Name", "Value")
-    Tech1 <- data.frame(Tech1)
-
-    nuW <- Tech1_1_level(spec, "nu")
-    Tech1 <- rbind(Tech1, nuW)
-    lambdaW <- Tech1_1_level(spec, "lambda")
-    Tech1 <- rbind(Tech1, lambdaW)
-    thetaW <- Tech1_1_level(spec, "theta")
-    Tech1 <- rbind(Tech1, thetaW)
-    alphaW <- Tech1_1_level(spec, "alpha")
-    Tech1 <- rbind(Tech1, alphaW)
-    betaW <- Tech1_1_level(spec, "beta")
-    Tech1 <- rbind(Tech1, betaW)
-    psiW <- Tech1_1_level(spec, "psi")
-    Tech1 <- rbind(Tech1, psiW)
-
-    Tech1 <- Tech1[order(Tech1$Value),]
-
-    results <- mplus_output$parameters
-    res.tech1 <- data.frame(lapply(results$unstandardized, unlist))
-    res.tech1["tech1"] <- 0
-
-
-    ## -- Match TECH1 information to parameters file -- ##
-    for (i in 1:mplus_output$summaries$Parameters) {
-      t.par <- Tech1[i, "par"]
-      t.row <- Tech1[i, "Row_Name"]
-      t.col <- Tech1[i, "Col_Name"]
-      if (t.par == "psi" | t.par == "theta") {
-        if (t.row != t.col) {
-          lhs = paste0(t.row,".WITH")
-          ind <- which(res.tech1[,"paramHeader"] == lhs & res.tech1[,"param"] == t.col)
-        } else {
-          ind <- which((res.tech1[,"paramHeader"] == "Variances" | res.tech1[,"paramHeader"] == "Residual.Variances") & res.tech1[,"param"] == t.col)
-        }
-      }
-      if (t.par == "lambda") {
-        lhs = paste0(t.row,".BY")
-        ind <- which(res.tech1[,"paramHeader"] == lhs & res.tech1[,"param"] == t.col)
-      }
-      if (t.par == "alpha" | t.par == "nu") {
-        ind <- which((res.tech1[,"paramHeader"] == "Means" | res.tech1[,"paramHeader"] == "Intercepts") & res.tech1[,"param"] == t.col)
-      }
-      if (t.par == "beta") {
-        lhs = paste0(t.row,".ON")
-        ind <- which(res.tech1[,"paramHeader"] == lhs & res.tech1[,"param"] == t.col)
-      }
-      res.tech1[ind,"tech1"] <- i
-    }
-    ## end (for i) ------- ##
-    return(res.tech1)
-  }
-
-  ## ----- Two-levels ----- ##
-  if (ncol(results$unstandardized) == 7) {
-    Tech1 <- matrix(nrow = 0, ncol = 5)
-    colnames(Tech1) <- c("level", "par", "Row_Name", "Col_Name", "Value")
-    Tech1 <- data.frame(Tech1)
-
-    nuW <- Tech1_2_level(spec, "Within", "nu")
-    Tech1 <- rbind(Tech1, nuW)
-    lambdaW <- Tech1_2_level(spec, "Within", "lambda")
-    Tech1 <- rbind(Tech1, lambdaW)
-    thetaW <- Tech1_2_level(spec, "Within", "theta")
-    Tech1 <- rbind(Tech1, thetaW)
-    alphaW <- Tech1_2_level(spec, "Within", "alpha")
-    Tech1 <- rbind(Tech1, alphaW)
-    betaW <- Tech1_2_level(spec, "Within", "beta")
-    Tech1 <- rbind(Tech1, betaW)
-    psiW <- Tech1_2_level(spec, "Within", "psi")
-    Tech1 <- rbind(Tech1, psiW)
-
-    nuB <- Tech1_2_level(spec, "Between", "nu")
-    Tech1 <- rbind(Tech1, nuB)
-    lambdaB <- Tech1_2_level(spec, "Between", "lambda")
-    Tech1 <- rbind(Tech1, lambdaB)
-    thetaB <- Tech1_2_level(spec, "Between", "theta")
-    Tech1 <- rbind(Tech1, thetaB)
-    alphaB <- Tech1_2_level(spec, "Between", "alpha")
-    Tech1 <- rbind(Tech1, alphaB)
-    betaB <- Tech1_2_level(spec, "Between", "beta")
-    Tech1 <- rbind(Tech1, betaB)
-    psiB <- Tech1_2_level(spec, "Between", "psi")
-    Tech1 <- rbind(Tech1, psiB)
-
-    Tech1 <- Tech1[order(Tech1$Value),]
-
-    results <- mplus_output$parameters
-    res.tech1 <- data.frame(lapply(results$unstandardized, unlist))
-    res.tech1["tech1"] <- 0
-
-
-    ## -- Match TECH1 information to parameters file -- ##
-    for (i in 1:mplus_output$summaries$Parameters) {
-      t.level <- Tech1[i,"level"]
-      t.par <- Tech1[i, "par"]
-      t.row <- Tech1[i, "Row_Name"]
-      t.col <- Tech1[i, "Col_Name"]
-      if (t.par == "psi" | t.par == "theta") {
-        if (t.row != t.col) {
-          lhs = paste0(t.col,".WITH")
-          ind <- which(res.tech1[,"paramHeader"] == lhs & res.tech1[,"param"] == t.row & res.tech1[,"BetweenWithin"] == t.level)
-          if (length(ind) == 0) {
-            lhs = paste0(t.row,".WITH")
-            ind <- which(res.tech1[,"paramHeader"] == lhs & res.tech1[,"param"] == t.col & res.tech1[,"BetweenWithin"] == t.level)
-          }
-        } else {
-          ind <- which((res.tech1[,"paramHeader"] == "Variances" | res.tech1[,"paramHeader"] == "Residual.Variances") & res.tech1[,"param"] == t.col &
-             res.tech1[,"BetweenWithin"] == t.level)
-        }
-      }
-      if (t.par == "lambda") {
-        lhs = paste0(t.row,".BY")
-        ind <- which(res.tech1[,"paramHeader"] == lhs & res.tech1[,"param"] == t.col & res.tech1[,"BetweenWithin"] == t.level)
-      }
-      if (t.par == "alpha" | t.par == "nu") {
-        ind <- which((res.tech1[,"paramHeader"] == "Means" | res.tech1[,"paramHeader"] == "Intercepts") & res.tech1[,"param"] == t.col &
-             res.tech1[,"BetweenWithin"] == t.level)
-      }
-      if (t.par == "beta") {
-        lhs = paste0(t.row,".ON")
-        ind <- which(res.tech1[,"paramHeader"] == lhs & res.tech1[,"param"] == t.col & res.tech1[,"BetweenWithin"] == t.level)
-      }
-      res.tech1[ind,"tech1"] <- i
-    }
-    ## ------- ##
-
-    return(res.tech1)
-  }
-
-  sink("Tech1.txt")
-  print(res.tech1)
-  sink()
-  cat("\n")
-  cat("Output is saved as 'Tech1.txt'", rep("\n", 2))
-
-} # end (function TECH1)
-
-
-
-
-## -- Sub-function identifying what the numbers in TECH1 refer to (One-Level) -- ##
-Tech1_1_level <- function(spec, para) {
-  if (names(spec)[1] != "X") {
-    p.tech1 <- paste0("spec$", para)
-  } else {
-    p.tech1 <- paste0("spec$X$", para)
-  }
-  parameter <- eval(parse(text = p.tech1))
-  parameter_greater_than_0 <- which(parameter > 0, arr.ind = TRUE)
-  if (length(parameter_greater_than_0) > 0) {
-    result_parameter <- data.frame(
-      par = para,
-      Row_Name = rownames(parameter)[parameter_greater_than_0[, "row"]],
-      Col_Name = colnames(parameter)[parameter_greater_than_0[, "col"]],
-      Value = parameter[parameter_greater_than_0]
-    )
-    return(result_parameter)
-  }
-} # end (Sub-Function "Tech1_1_level")
-
-## -- Sub-function identifying what the numbers in TECH1 refer to (Two-Level) -- ##
-Tech1_2_level <- function(spec, level, para) {
-  p.tech1 <- paste0("spec$", toupper(level), "$", para)
-  parameter <- eval(parse(text = p.tech1))
-  parameter_greater_than_0 <- which(parameter > 0, arr.ind = TRUE)
-  if (length(parameter_greater_than_0) > 0) {
-    result_parameter <- data.frame(
-      level = level,
-      par = para,
-      Row_Name = rownames(parameter)[parameter_greater_than_0[, "row"]],
-      Col_Name = colnames(parameter)[parameter_greater_than_0[, "col"]],
-      Value = parameter[parameter_greater_than_0]
-    )
-    return(result_parameter)
-  }
-} # end (Sub-Function "Tech1_2_level")
-
 
 
 
@@ -2910,25 +2294,25 @@ Two_Way_Figure <- function(estX.lo, estX.hi) {
       names_to = "line_id",
       values_to = "y_value"
     )
-    y.upper = 1.5*max(df_long$y_value) - 0.5*mean(df_long$y_value)
-    y.lower = 1.5*min(df_long$y_value) - 0.5*mean(df_long$y_value)
+  y.upper = 1.5*max(df_long$y_value) - 0.5*mean(df_long$y_value)
+  y.lower = 1.5*min(df_long$y_value) - 0.5*mean(df_long$y_value)
 
   # -- Plot Figure p_int -- #
   p_int <<- ggplot2::ggplot(data = df_long, aes(x = x_var, y = y_value, color = line_id, linetype = line_id)) +
-                    xlim(-2.5, 2.5) +
-                    ylim(y.lower, y.upper) +
-           geom_line(linewidth=1) +
-           scale_linetype_manual(name = "Moderator Levels",
-                                 values = c("line1" = "solid", "line2" = "solid"),
-                                 labels = c("Mean - 1 S.D.", "Mean + 1 S.D.")) +
-           scale_color_manual(name = "Moderator Levels",
-                              values = c("line1" = "black", "line2" = "grey"),
-                              labels = c("Mean - 1 S.D.", "Mean + 1 S.D.")) +
-           guides(linetype = "none") +
-           labs(title = "Standardized Moderated-Mediating Effects",
-                    x = "X-axis Label",
-                    y = "Mediating Effects of X on Y through M") +
-           theme_classic()  # Optional: Apply a theme
+    xlim(-2.5, 2.5) +
+    ylim(y.lower, y.upper) +
+    geom_line(linewidth=1) +
+    scale_linetype_manual(name = "Moderator Levels",
+                          values = c("line1" = "solid", "line2" = "solid"),
+                          labels = c("Mean - 1 S.D.", "Mean + 1 S.D.")) +
+    scale_color_manual(name = "Moderator Levels",
+                       values = c("line1" = "black", "line2" = "grey"),
+                       labels = c("Mean - 1 S.D.", "Mean + 1 S.D.")) +
+    guides(linetype = "none") +
+    labs(title = "Standardized Moderated-Mediating Effects",
+         x = "X-axis Label",
+         y = "Mediating Effects of X on Y through M") +
+    theme_classic()  # Optional: Apply a theme
 
   print(p_int) # show p_int
 
@@ -2941,5 +2325,163 @@ Two_Way_Figure <- function(estX.lo, estX.hi) {
 
 ## ===== Close 2-Way Standardized Interaction Figure ===== ##
 
+
+
+
+## ====== Function "sim_mplus" Monte Carlo Confidence Intervals for Moderated Mediation (mplus) ====== ##
+#' Monte Carlo Simulation for Confidence Intervals of Moderated Mediation (mplus)
+#'
+#' Generate confidence intervals of moderated-mediating effects from mplus results using Monte Carlo simulation.
+#'
+#'
+#' @param mplus_output Mplus output (.out) file (output from Mplus).
+#' @param R number of Monte Carlo simulation samples (in millions). For example, R=5 (default) generates 5,000,000 simulated samples.
+#'
+#' @return sim_mplus output for plotting Johnson-Neyman Figure.
+#' @export
+#' @examples
+#'
+#' ## -- Example -- ##
+#'
+#' # mplus_output is "mplusresults.out" & moderator Z is "AUTO"
+#' # output sim_mplus object is mcObject
+#'
+#' mcObject <- sim_mplus("mplusresults.out", S = 5)
+#'
+
+sim_mplus <- function(mplus_output = "mplusresults.out", S=5) {
+
+  ## ------------------------------- ##
+
+  my_model <- readModels(mplus_output)
+
+  NEW <- my_model$tech1$parameterSpecification$THE.ADDITIONAL.PARAMETERS$new_additional
+  names(NEW) <- colnames(NEW)
+  Tech3 <- my_model$tech3$paramCov
+  Tech3[upper.tri(Tech3)] <- t(Tech3)[upper.tri(Tech3)]
+  Tech3 <- Tech3[NEW, NEW]
+  colnames(Tech3) <- names(NEW)
+  rownames(Tech3) <- names(NEW)
+
+  estcoeff <- scan(gsub('"', '', my_model$input$savedata$results), sep = "", what = numeric())
+
+  if ("stdyx.standardized" %in% names(my_model$parameters) == "FALSE") {
+    stdyx.estcoeff <- matrix(nrow = 0, ncol = 0)
+  } else {
+    d <- vector()
+    for (i in 1:length(NEW)) {
+      d <- c(d, which(estcoeff == estcoeff[NEW[i]])[1])
+    }
+    d <- d + 2*sum(coef(my_model)[, "pval"] != 999)
+    names(d) <- names(NEW)
+    stdyx.estcoeff <- estcoeff
+    stdyx.estcoeff <- stdyx.estcoeff[d]
+    names(stdyx.estcoeff) <- names(d)
+  } # end if stdyx
+
+  estcoeff <- estcoeff[NEW]
+  names(estcoeff) <- names(NEW)
+
+
+  ## -- Monte Carlo Simulation of S*1e6 samples, default: S = 5 -- ##
+  mcmc <- MASS::mvrnorm(n=S*1e6, mu=estcoeff, Sigma=Tech3, tol = 1e-6)
+
+  # -- Retain simulated samples with variance larger than or equal to 0 -- #
+  VAR.LIST <- my_model$parameters$unstandardized[which(my_model$parameters$unstandardized$paramHeader == "Variances"), "param"]
+  VAR.L1 <- vector()
+  VAR.L2 <- vector()
+
+  if ("BetweenWithin" %in% colnames(my_model$parameters$unstandardized) == TRUE) {
+    if (length(diag(my_model$tech1$parameterSpecification$WITHIN$psi)[VAR.LIST]) != 0) {
+      VAR.L1 <- diag(my_model$tech1$parameterSpecification$WITHIN$psi)[VAR.LIST]
+    }
+    if (length(diag(my_model$tech1$parameterSpecification$BETWEEN$psi)[VAR.LIST]) != 0) {
+      VAR.L2 <- diag(my_model$tech1$parameterSpecification$BETWEEN$psi)[VAR.LIST]
+    }
+    VAR <- c(VAR.L1, VAR.L2)
+  } else {
+    VAR <- diag(my_model$tech1$parameterSpecification$X$psi)[VAR.LIST]
+  } # end Between/Within
+
+  var.sim <- which(d %in% VAR)
+  if (length(var.sim) > 0) {
+    for (i in 1:length(var.sim)) {
+      mcmc <- mcmc[which(mcmc[, var.sim[i]] > 0), , drop = FALSE]
+    } # end for i
+  } # end if
+  b.no <- nrow(mcmc)
+  S.no <- format(S*1e6, scientific = FALSE)
+
+  # -- Print number of bootstrap samples -- #
+  cat("\n", "   Number of requested simulated samples = ", S.no)
+  cat("\n", "   Number of completed simulated samples = ", b.no, rep("\n",2))
+
+  ## ------------------------------ ##
+
+  return(list(mcmc, estcoeff, stdyx.estcoeff))
+
+}  ## end (Function "sim_mplus") ##
+
+
+
+## ====== Function "read.boot_mplus" Monte Carlo Confidence Intervals for Moderated Mediation (mplus) ====== ##
+#' Read bootstrap parameter from Mplus bootstrapping
+#'
+#'
+#' @param mplus_output Mplus output (.out) file (output from Mplus).
+#' @param boot.file file with Mplus bootstrap sample parameters (output from Mplus).
+#'
+#' @export
+#' @examples
+#'
+#' ## -- Example -- ##
+#'
+#' # mplus_output is "mplusresults.out"
+#' # boot.file is "boot_temp.txt"
+#' # output of read.boot_mplus object is mcObject
+#'
+#' mcObject <- read.boot_mplus("mplusresults.out", "boot_temp.txt")
+#'
+
+read.boot_mplus <- function(mplus_output, boot.file) {
+
+  ## ------------------------------- ##
+
+  my_mplus <- readModels(mplus_output)
+
+  NEW <- my_mplus$tech1$parameterSpecification$THE.ADDITIONAL.PARAMETERS$new_additional
+  names(NEW) <- colnames(NEW)
+
+  estcoeff <- scan(gsub('"', '', my_mplus$input$savedata$results), sep = "", what = numeric())
+
+  if ("stdyx.standardized" %in% names(my_mplus$parameters) == "FALSE") {
+    stdyx.estcoeff <- matrix(nrow = 0, ncol = 0)
+  } else {
+    d <- vector()
+    for (i in 1:length(NEW)) {
+      d <- c(d, which(estcoeff == estcoeff[NEW[i]])[1])
+    }
+    d <- d + 2*sum(coef(my_mplus)[, "pval"] != 999)
+    names(d) <- names(NEW)
+    stdyx.estcoeff <- estcoeff
+    stdyx.estcoeff <- stdyx.estcoeff[d]
+    names(stdyx.estcoeff) <- names(d)
+  } # end if stdyx
+
+  estcoeff <- estcoeff[NEW]
+  names(estcoeff) <- names(NEW)
+
+  mcmc <- read.table(boot.file, sep="")
+  mcmc <- mcmc[,NEW+1] # the first row is bootstrap sample number
+  names(mcmc) <- names(NEW)
+
+  # -- Print number of bootstrap samples -- #
+  cat("\n", "   Number of bootstrap samples = ", nrow(mcmc), rep("\n",2))
+
+  ## ------------------------------ ##
+
+  return(list(mcmc, estcoeff, stdyx.estcoeff))
+
+}  ## end (Function "read.boot_mplus") ##
 
 

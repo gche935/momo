@@ -1,10 +1,10 @@
 Package: momo
 Type: Package
 Title: Monte Carlo Simulation for Confidence Intervals of Moderated Mediation (modsem, lavaan & Mplus) 
-Version: 0.1.1
+Version: 0.1.2
 Author: Anonymous 
 Maintainer: The package maintainer <yourself@somewhere.net>
-Description: Generate confidence intervals of moderated mediation with Monte Carlo simulated samples from modsem, lavaan or Mplus results  
+Description: Generate confidence intervals of moderated mediation using  Monte Carlo simulation or bootstrapping from modsem, lavaan or Mplus results  
 License: GPL-3
 Encoding: UTF-8
 Depends: R (>= 3.5.1),
@@ -14,6 +14,12 @@ Depends: R (>= 3.5.1),
          dplyr,
          MplusAutomation
 Imports:
+    future,
+    modsemTools,
+    modsem,
+    lavaan,
+    parallel,
+    doParallel,
     MASS,
     ggplot2,
     tidyr,
@@ -21,4 +27,4 @@ Imports:
     MplusAutomation
 URL: https://github.com/gche935/momo
 BugReports: https://github.com/gche935/momo/issues
-Config/roxygen2/version: 8.0.0
+Config/roxygen2/version: 8.1.1

@@ -29,5 +29,4 @@ Generate resampled labeled parameters from modsem or lavaan outputs using Monte 
 
 mcObject <- momo.resample(est_lms, S.no=5)
 
-
 }

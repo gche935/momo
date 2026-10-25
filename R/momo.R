@@ -2279,8 +2279,30 @@ momo.JNplot <- function (momoObject, ci="bc",
 
 
 
-
-## ===== Sub_Function to Create 2-way Interaction Figure ===== ##
+## ===== Function Two_Way_Figure to Create 2-way Interaction Figure ===== ##
+#' Create Two-Way Figure 
+#'
+#' Generate 2-way figure from momo.resample object. 
+#'
+#' @param estX.lo effect at the Lo level of the moderator.
+#' @param estX.hi effect at the Hi level of the moderator.
+#' @param stdX standard deviation of X.
+#'
+#' @return a 2-way figure
+#' @export
+#' @examples
+#'
+#' ## -- Example -- ##
+#'
+#' Two_Way_Figure(estX.lo=-.1314, estX.hi=-.1027, stdX=1.111) # Plot unstandardized Figure with Sub-Function
+#' p_USint <- p_int + 
+#'            ggplot2::ggtitle("Unstandardized Moderated-Mediating Effects") +
+#'            theme(plot.title = element_text(hjust = 0.5)) +
+#'            labs(x = "X-axis Label", y = "Mediating Effects of X on Y through M") 
+#' print(p_USint) # show p_USint
+#' ggplot2::ggsave("2-Way Unstandardized Interaction Figure.png", width = 22.86, height = 16.51, units = "cm")
+#' # Figure p_USint is saved as '2-Way Unstandardized Interaction Figure.png'
+#'
 
 Two_Way_Figure <- function(estX.lo, estX.hi, stdX) {
 
@@ -2321,7 +2343,32 @@ Two_Way_Figure <- function(estX.lo, estX.hi, stdX) {
 
 
 
-## ===== Sub_Function to Create 3-way Interaction Figure ===== ##
+## ===== Function Three_Way_Figure to Create 3-way Interaction Figure ===== ##
+#' Create Three-Way Figure 
+#'
+#' Generate 3-way figure from momo.resample object. 
+#'
+#' @param Hi.Z_Hi.W effect at the Hi level of Z and the Hi level of W.
+#' @param Hi.Z_Lo.W effect at the Hi level of Z and the Lo level of W.
+#' @param Lo.Z_Hi.W effect at the Lo level of Z and the Hi level of W.
+#' @param Lo.Z_Lo.W effect at the Lo level of Z and the Lo level of W.
+#' @param stdX standard deviation of X.
+#'
+#' @return a 3-way figure
+#' @export
+#' @examples
+#'
+#' ## -- Example -- ##
+#'
+#' Three_Way_Figure(Hi.Z_Hi.W=-.0435, Hi.Z_Lo.W=-.0296, Lo.Z_Hi.W=-.0513, Lo.Z_Lo.W=.0320, stdX=1.50831) # Plot unstandardized Figure with Sub-Function
+#' p_USint3 <- p_int + 
+#'           ggplot2::ggtitle("Unstandardized Moderated-Mediating Effects") +
+#'           theme(plot.title = element_text(hjust = 0.5)) +
+#'           labs(x = "X-axis Label", y = "Mediating Effects of X on Y through M") 
+#' print(p_USint3) # show p_USint3
+#' ggplot2::ggsave("3-Way Unstandardized Interaction Figure.png", width = 22.86, height = 16.51, units = "cm")
+#' # Figure p_USint is saved as '3-Way Unstandardized Interaction Figure.png'
+#'
 
 Three_Way_Figure <- function(Hi.Z_Hi.W, Hi.Z_Lo.W, Lo.Z_Hi.W, Lo.Z_Lo.W, stdX) {
 

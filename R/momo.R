@@ -869,7 +869,16 @@ momo.ci <- function(mcmc.object,
       cat("\n", "Standardized indirect effects when Z is low (Mean - 1 S.D.) = ", format(estX.lo, digits=4, nsmall=4))
       cat("\n", "Standardized indirect effects when Z is high (Mean + 1 S.D.) = ", format(estX.hi, digits=4, nsmall=4), "\n")
 
-      Two_Way_Figure(estX.lo, estX.hi) # Plot standardized Figure with Sub-Function
+      Two_Way_Figure(estX.lo, estX.hi, 1) # Plot standardized Figure with Sub-Function
+      p_Sint <- p_int + 
+                ggplot2::ggtitle("Standardized Moderated-Mediating Effects") +
+                theme(plot.title = element_text(hjust = 0.5)) +
+                labs(x = "X-axis Label", y = "Mediating Effects of X on Y through M") 
+      print(p_Sint) # show p_Sint
+      ggplot2::ggsave("2-Way Standardized Interaction Figure.png", width = 22.86, height = 16.51, units = "cm")
+      cat("\n")
+      cat("Figure p_Sint is saved as '2-Way Standardized Interaction Figure.png'", rep("\n", 2))
+
     } else {
       cat("\n", "** Standardized indirect effects are not available **", "\n")
     } # end (if stdyx.estcoeff)
@@ -1086,10 +1095,19 @@ momo.ci <- function(mcmc.object,
       estX.hi <- (Z7Xa1+Z7Xw1)*(Z7Xa2+Z7Xw2)*(Z7Xa3+Z7Xw3)*(Z7Xa4+Z7Xw4)
 
       # -- Print standardized indirect effects -- #
-      cat("\n", "Standardized indirect effects when Z is low (Mean - 1 S.D.) = ", format(estX.lo, digits=4, nsmall=4))
-      cat("\n", "Standardized indirect effects when Z is high (Mean + 1 S.D.) = ", format(estX.hi, digits=4, nsmall=4), "\n")
+      cat("\n", "Standardized indirect effects when W is low (Mean - 1 S.D.) = ", format(estX.lo, digits=4, nsmall=4))
+      cat("\n", "Standardized indirect effects when W is high (Mean + 1 S.D.) = ", format(estX.hi, digits=4, nsmall=4), "\n")
 
-      Two_Way_Figure(estX.lo, estX.hi) # Plot standardized Figure with Sub-Function
+      Two_Way_Figure(estX.lo, estX.hi, 1) # Plot standardized Figure with Sub-Function
+      p_Sint <- p_int + 
+                ggplot2::ggtitle("Standardized Moderated-Mediating Effects") +
+                theme(plot.title = element_text(hjust = 0.5)) +
+                labs(x = "X-axis Label", y = "Mediating Effects of X on Y through M") 
+      print(p_Sint) # show p_Sint
+      ggplot2::ggsave("2-Way Standardized Interaction Figure.png", width = 22.86, height = 16.51, units = "cm")
+      cat("\n")
+      cat("Figure p_Sint is saved as '2-Way Standardized Interaction Figure.png'", rep("\n", 2))
+
     } else {
       cat("\n", "** Standardized indirect effects are not available **", "\n")
     } # end (if stdyx.estcoeff)
@@ -1243,7 +1261,6 @@ momo.ci <- function(mcmc.object,
     print(BCCI.SST, quote=FALSE, right=TRUE)
     cat("\n")
 
-
     if (all(is.na(stdyx.estcoeff)) == "FALSE") {
       # -- Plot Standardized 2-Way Interaction Effects -- #
       # Define estimated parameters for calculating indirect effects
@@ -1263,7 +1280,15 @@ momo.ci <- function(mcmc.object,
       cat("\n", "Standardized indirect effects when Z is low (Mean - 1 S.D.) = ", format(estX.lo, digits=4, nsmall=4))
       cat("\n", "Standardized indirect effects when Z is high (Mean + 1 S.D.) = ", format(estX.hi, digits=4, nsmall=4), "\n")
 
-      Two_Way_Figure(estX.lo, estX.hi) # Plot standardized Figure with Sub-Function
+      Two_Way_Figure(estX.lo, estX.hi, 1) # Plot standardized Figure with Sub-Function
+      p_Sint <- p_int + 
+                ggplot2::ggtitle("Standardized Moderated-Mediating Effects") +
+                theme(plot.title = element_text(hjust = 0.5)) +
+                labs(x = "X-axis Label", y = "Mediating Effects of X on Y through M") 
+      print(p_Sint) # show p_Sint
+      ggplot2::ggsave("2-Way Standardized Interaction Figure.png", width = 22.86, height = 16.51, units = "cm")
+      cat("\n")
+      cat("Figure p_Sint is saved as '2-Way Standardized Interaction Figure.png'", rep("\n", 2))
 
     } else {
       cat("\n", "** Standardized indirect effects are not available **", "\n")
@@ -1433,10 +1458,18 @@ momo.ci <- function(mcmc.object,
       estX.hi <- (Z7Xa1+Z7Xw1)*(Z7Xa2+Z7Xw2)*(Z7Xa3+Z7Xw3)*(Z7Xa4+Z7Xw4)
 
       # -- Print standardized indirect effects -- #
-      cat("\n", "Standardized indirect effects when Z is low (Mean - 1 S.D.) = ", format(estX.lo, digits=4, nsmall=4))
-      cat("\n", "Standardized indirect effects when Z is high (Mean + 1 S.D.) = ", format(estX.hi, digits=4, nsmall=4), "\n")
+      cat("\n", "Standardized indirect effects when W is low (Mean - 1 S.D.) = ", format(estX.lo, digits=4, nsmall=4))
+      cat("\n", "Standardized indirect effects when W is high (Mean + 1 S.D.) = ", format(estX.hi, digits=4, nsmall=4), "\n")
 
-      Two_Way_Figure(estX.lo, estX.hi) # Plot standardized Figure with Sub-Function
+      Two_Way_Figure(estX.lo, estX.hi, 1) # Plot standardized Figure with Sub-Function
+      p_Sint <- p_int + 
+                ggplot2::ggtitle("Standardized Moderated-Mediating Effects") +
+                theme(plot.title = element_text(hjust = 0.5)) +
+                labs(x = "X-axis Label", y = "Mediating Effects of X on Y through M") 
+      print(p_Sint) # show p_Sint
+      ggplot2::ggsave("2-Way Standardized Interaction Figure.png", width = 22.86, height = 16.51, units = "cm")
+      cat("\n")
+      cat("Figure p_Sint is saved as '2-Way Standardized Interaction Figure.png'", rep("\n", 2))
 
     } else {
       cat("\n", "** Standardized indirect effects are not available **", "\n")
@@ -1899,45 +1932,16 @@ momo.ci <- function(mcmc.object,
       cat("\n", "Standardized effects when Z is low (Mean - 1 S.D.) and W is high (Mean + 1 S.D.) = ", format(TWx3, digits=4, nsmall=4))
       cat("\n", "Standardized effects when Z is low (Mean - 1 S.D.) and W is low (Mean - 1 S.D.) = ", format(TWx4, digits=4, nsmall=4), "\n")
 
-      df_wide <- data.frame(
-        x_var = c(-2,2),
-        line1 = c(TWx1*-2, TWx1*2),
-        line2 = c(TWx2*-2, TWx2*2),
-        line3 = c(TWx3*-2, TWx3*2),
-        line4 = c(TWx4*-2, TWx4*2)
-      )
-
-      # Convert to long format
-      df_long <- df_wide %>%
-        pivot_longer(
-          cols = starts_with("line"),
-          names_to = "line_id",
-          values_to = "y_value"
-        )
-      y.upper = 1.5*max(df_long$y_value) - 0.5*mean(df_long$y_value)
-      y.lower = 1.5*min(df_long$y_value) - 0.5*mean(df_long$y_value)
-
-      p_int <<- ggplot(data = df_long, aes(x = x_var, y = y_value, color = line_id, linetype = line_id)) +
-        xlim(-2.5, 2.5) +
-        ylim(y.lower, y.upper) +
-        geom_line(linewidth=1) +
-        scale_linetype_manual(name = "Moderator Levels\nHi = mean + 1sd\nLo = mean - 1sd",
-                              values = c("line1" = "solid", "line2" = "twodash", "line3" = "solid", "line4" = "twodash"),
-                              labels = c("Hi-Z, Hi-W", "Hi-Z, Lo-W", "Lo-Z, Hi-W", "Lo-Z, Lo-W")) +
-        scale_color_manual(name = "Moderator Levels\nHi = mean + 1sd\nLo = mean - 1sd",
-                           values = c("line1" = "black", "line2" = "black", "line3" = "grey", "line4"="grey"),
-                           labels = c("Hi-Z, Hi-W", "Hi-Z, Lo-W", "Lo-Z, Hi-W", "Lo-Z, Lo-W")) +
-        labs(title = "Standardized Three-Way Interaction Effects",
-             x = "X-axis Label",
-             y = "Indirect Effect of X on Y (through M)") +
-        theme_classic() # Optional: Apply a theme
+      Three_Way_Figure(TWx1, TWx2, TWx3, TWx4, 1) # Plot standardized Figure with Sub-Function
+      p_Sint3 <- p_int + 
+                ggplot2::ggtitle("Standardized Three-Way Interaction Effects") +
+                theme(plot.title = element_text(hjust = 0.5)) +
+                labs(x = "X-axis Label", y = "Indirect Effect X on Y (through M)") 
+      print(p_Sint3) # show p_Sint3
 
       ggplot2::ggsave("3-Way Interaction Figure.png", width = 22.86, height = 16.51, units = "cm")
-
-      print(p_int) # show p_int
-
       cat("\n")
-      cat("Figure p_int is saved in '3-Way Interaction Figure.png'", rep("\n", 2))
+      cat("Figure p_Sint3 is saved in '3-Way Interaction Figure.png'", rep("\n", 2))
 
       ## == Close 3-Way Interaction Figure
     } else {
@@ -1967,7 +1971,7 @@ momo.ci <- function(mcmc.object,
                  Sw1=U7XSw1, Sw2=U7XSw2, Sw3=U7XSw3, Sw4=U7XSw4,
                  b.no = b.no, NoModz = NoModz, NoModw = NoModw, Z=Z))
 
-}  ## ===== End (function momo.CI) ===== ##
+}  ## ===== End (function momo.ci) ===== ##
 
 
 
@@ -2276,15 +2280,16 @@ momo.JNplot <- function (momoObject, ci="bc",
 
 
 
-## ===== Sub_Function to Create 2-way Standardized Interaction Figure ===== ##
 
-Two_Way_Figure <- function(estX.lo, estX.hi) {
+## ===== Sub_Function to Create 2-way Interaction Figure ===== ##
+
+Two_Way_Figure <- function(estX.lo, estX.hi, stdX) {
 
   # -- Calculate endpoints of two lines-- #
   df_wide <- data.frame(
-    x_var = c(-2,2),
-    line1 = c(estX.lo*-2, estX.lo*2),
-    line2 = c(estX.hi*-2, estX.hi*2)
+    x_var = c(-2*stdX, 2*stdX),
+    line1 = c(estX.lo*-2*stdX, estX.lo*2*stdX),
+    line2 = c(estX.hi*-2*stdX, estX.hi*2*stdX)
   )
 
   # -- Convert to long format -- #
@@ -2299,7 +2304,7 @@ Two_Way_Figure <- function(estX.lo, estX.hi) {
 
   # -- Plot Figure p_int -- #
   p_int <<- ggplot2::ggplot(data = df_long, aes(x = x_var, y = y_value, color = line_id, linetype = line_id)) +
-    xlim(-2.5, 2.5) +
+    xlim(-2.5*stdX, 2.5*stdX) +
     ylim(y.lower, y.upper) +
     geom_line(linewidth=1) +
     scale_linetype_manual(name = "Moderator Levels",
@@ -2309,21 +2314,54 @@ Two_Way_Figure <- function(estX.lo, estX.hi) {
                        values = c("line1" = "black", "line2" = "grey"),
                        labels = c("Mean - 1 S.D.", "Mean + 1 S.D.")) +
     guides(linetype = "none") +
-    labs(title = "Standardized Moderated-Mediating Effects",
-         x = "X-axis Label",
-         y = "Mediating Effects of X on Y through M") +
     theme_classic()  # Optional: Apply a theme
-
-  print(p_int) # show p_int
-
-  ggplot2::ggsave("2-Way Standardized Interaction Figure.png", width = 22.86, height = 16.51, units = "cm")
-
-  cat("\n")
-  cat("Figure p_int is saved as '2-Way Standardized Interaction Figure.png'", rep("\n", 2))
 
 } # end (Sub-Function: Two-Way_Figure)
 
-## ===== Close 2-Way Standardized Interaction Figure ===== ##
+## ===== Close 2-Way Interaction Figure ===== ##
+
+
+
+## ===== Sub_Function to Create 3-way Interaction Figure ===== ##
+
+Three_Way_Figure <- function(Hi.Z_Hi.W, Hi.Z_Lo.W, Lo.Z_Hi.W, Lo.Z_Lo.W, stdX) {
+
+  # -- Calculate endpoints of two lines-- #
+
+      df_wide <- data.frame(
+        x_var = c(-2,2),
+        line1 = c(Hi.Z_Hi.W*-2, Hi.Z_Hi.W*2),
+        line2 = c(Hi.Z_Lo.W*-2, Hi.Z_Lo.W*2),
+        line3 = c(Lo.Z_Hi.W*-2, Lo.Z_Hi.W*2),
+        line4 = c(Lo.Z_Lo.W*-2, Lo.Z_Lo.W*2)
+      )
+
+      # Convert to long format
+      df_long <- df_wide %>%
+        pivot_longer(
+          cols = starts_with("line"),
+          names_to = "line_id",
+          values_to = "y_value"
+        )
+      y.upper = 1.5*max(df_long$y_value) - 0.5*mean(df_long$y_value)
+      y.lower = 1.5*min(df_long$y_value) - 0.5*mean(df_long$y_value)
+
+      p_int <<- ggplot(data = df_long, aes(x = x_var, y = y_value, color = line_id, linetype = line_id)) +
+        xlim(-2.5, 2.5) +
+        ylim(y.lower, y.upper) +
+        geom_line(linewidth=1) +
+        scale_linetype_manual(name = "Moderator Levels\nHi = mean + 1sd\nLo = mean - 1sd",
+                              values = c("line1" = "solid", "line2" = "twodash", "line3" = "solid", "line4" = "twodash"),
+                              labels = c("Hi-Z, Hi-W", "Hi-Z, Lo-W", "Lo-Z, Hi-W", "Lo-Z, Lo-W")) +
+        scale_color_manual(name = "Moderator Levels\nHi = mean + 1sd\nLo = mean - 1sd",
+                           values = c("line1" = "black", "line2" = "black", "line3" = "grey", "line4"="grey"),
+                           labels = c("Hi-Z, Hi-W", "Hi-Z, Lo-W", "Lo-Z, Hi-W", "Lo-Z, Lo-W")) +
+        theme_classic() # Optional: Apply a theme
+
+} # end (Sub-Function: Three-Way_Figure)
+
+## ===== Close 3-Way Interaction Figure ===== ##
+
 
 
 

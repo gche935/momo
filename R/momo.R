@@ -43,7 +43,6 @@ options(max.print=10000)
 #'
 #' mcObject <- momo.resample(est_lms, S.no=5)
 #'
-#'
 
 momo.resample <- function(object, S.no=5, B.no=0, B.speed="normal") {
 
@@ -870,10 +869,10 @@ momo.ci <- function(mcmc.object,
       cat("\n", "Standardized indirect effects when Z is high (Mean + 1 S.D.) = ", format(estX.hi, digits=4, nsmall=4), "\n")
 
       Two_Way_Figure(estX.lo, estX.hi, 1) # Plot standardized Figure with Sub-Function
-      p_Sint <- p_int + 
+      p_Sint <- p_int +
                 ggplot2::ggtitle("Standardized Moderated-Mediating Effects") +
                 theme(plot.title = element_text(hjust = 0.5)) +
-                labs(x = "X-axis Label", y = "Mediating Effects of X on Y through M") 
+                labs(x = "X-axis Label", y = "Mediating Effects of X on Y through M")
       print(p_Sint) # show p_Sint
       ggplot2::ggsave("2-Way Standardized Interaction Figure.png", width = 22.86, height = 16.51, units = "cm")
       cat("\n")
@@ -1099,10 +1098,10 @@ momo.ci <- function(mcmc.object,
       cat("\n", "Standardized indirect effects when W is high (Mean + 1 S.D.) = ", format(estX.hi, digits=4, nsmall=4), "\n")
 
       Two_Way_Figure(estX.lo, estX.hi, 1) # Plot standardized Figure with Sub-Function
-      p_Sint <- p_int + 
+      p_Sint <- p_int +
                 ggplot2::ggtitle("Standardized Moderated-Mediating Effects") +
                 theme(plot.title = element_text(hjust = 0.5)) +
-                labs(x = "X-axis Label", y = "Mediating Effects of X on Y through M") 
+                labs(x = "X-axis Label", y = "Mediating Effects of X on Y through M")
       print(p_Sint) # show p_Sint
       ggplot2::ggsave("2-Way Standardized Interaction Figure.png", width = 22.86, height = 16.51, units = "cm")
       cat("\n")
@@ -1281,10 +1280,10 @@ momo.ci <- function(mcmc.object,
       cat("\n", "Standardized indirect effects when Z is high (Mean + 1 S.D.) = ", format(estX.hi, digits=4, nsmall=4), "\n")
 
       Two_Way_Figure(estX.lo, estX.hi, 1) # Plot standardized Figure with Sub-Function
-      p_Sint <- p_int + 
+      p_Sint <- p_int +
                 ggplot2::ggtitle("Standardized Moderated-Mediating Effects") +
                 theme(plot.title = element_text(hjust = 0.5)) +
-                labs(x = "X-axis Label", y = "Mediating Effects of X on Y through M") 
+                labs(x = "X-axis Label", y = "Mediating Effects of X on Y through M")
       print(p_Sint) # show p_Sint
       ggplot2::ggsave("2-Way Standardized Interaction Figure.png", width = 22.86, height = 16.51, units = "cm")
       cat("\n")
@@ -1462,10 +1461,10 @@ momo.ci <- function(mcmc.object,
       cat("\n", "Standardized indirect effects when W is high (Mean + 1 S.D.) = ", format(estX.hi, digits=4, nsmall=4), "\n")
 
       Two_Way_Figure(estX.lo, estX.hi, 1) # Plot standardized Figure with Sub-Function
-      p_Sint <- p_int + 
+      p_Sint <- p_int +
                 ggplot2::ggtitle("Standardized Moderated-Mediating Effects") +
                 theme(plot.title = element_text(hjust = 0.5)) +
-                labs(x = "X-axis Label", y = "Mediating Effects of X on Y through M") 
+                labs(x = "X-axis Label", y = "Mediating Effects of X on Y through M")
       print(p_Sint) # show p_Sint
       ggplot2::ggsave("2-Way Standardized Interaction Figure.png", width = 22.86, height = 16.51, units = "cm")
       cat("\n")
@@ -1933,10 +1932,10 @@ momo.ci <- function(mcmc.object,
       cat("\n", "Standardized effects when Z is low (Mean - 1 S.D.) and W is low (Mean - 1 S.D.) = ", format(TWx4, digits=4, nsmall=4), "\n")
 
       Three_Way_Figure(TWx1, TWx2, TWx3, TWx4, 1) # Plot standardized Figure with Sub-Function
-      p_Sint3 <- p_int + 
+      p_Sint3 <- p_int +
                 ggplot2::ggtitle("Standardized Three-Way Interaction Effects") +
                 theme(plot.title = element_text(hjust = 0.5)) +
-                labs(x = "X-axis Label", y = "Indirect Effect X on Y (through M)") 
+                labs(x = "X-axis Label", y = "Indirect Effect X on Y (through M)")
       print(p_Sint3) # show p_Sint3
 
       ggplot2::ggsave("3-Way Interaction Figure.png", width = 22.86, height = 16.51, units = "cm")

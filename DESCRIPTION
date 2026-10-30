@@ -8,6 +8,11 @@ Description: Generate confidence intervals of moderated mediation using  Monte C
 License: GPL-3
 Encoding: UTF-8
 Depends: R (>= 3.5.1),
+         future,
+         modsemTools,
+         lavaan,
+         parallel,
+         doParallel,
          MASS,
          ggplot2,
          tidyr,
